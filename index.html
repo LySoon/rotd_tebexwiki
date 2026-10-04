@@ -314,6 +314,16 @@
     @keyframes unfold { from { opacity: 0; transform: translateY(-8px) scaleY(.96); } }
     .export-card details pre { margin-bottom: 4px; }
 
+    /* store link */
+    .page-foot .store-link {
+      display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 999px; font-weight: 600; text-decoration: none; border-bottom: 0;
+      color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(var(--ac), .35);
+      transition: transform .3s var(--ease), background .25s, box-shadow .3s;
+    }
+    .page-foot .store-link:hover { transform: translateY(-2px); background: rgba(var(--ac), .18); box-shadow: 0 10px 26px -12px rgba(var(--ac), .6); }
+    .page-foot { align-items: center; }
+    .sidebar-foot a { color: var(--accent); border-color: rgba(var(--ac), .3); }
+
     /* ---------- accessibility ---------- */
     :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
     .skip {
@@ -495,7 +505,7 @@
 
     /* ---------- print ---------- */
     @media print {
-      body::before, body::after, .sidebar, #toc, .theme-wrap, #read-progress, #to-top, .toolbar, .find-export, #palette, .copy-grp, .skip, .page-foot a,
+      body::before, body::after, .sidebar, #toc, .theme-wrap, #read-progress, #to-top, .toolbar, .find-export, #palette, .copy-grp, .skip, .page-foot a, .mobile-bar,
       .docsify-copy-code-button, .docsify-pagination-container, .sidebar-toggle, .crumbs { display: none !important; }
       html, body { background: #fff !important; color: #111 !important; }
       .content { left: 0 !important; padding: 0 !important; position: static !important; }
@@ -647,28 +657,54 @@
     ::selection { background: rgba(var(--ac),.3); color: #fff; }
     ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; }
 
-    .mobile-bar { display: none; }
+    /* ---------- top bar (all screen sizes): menu | title ... search, Discord, Tebex, theme ---------- */
+    .mobile-bar {
+      display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 55; padding: 0 14px 0 58px;
+      background: var(--panel); border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+    }
+    .mb-title { font: 700 15px "Space Grotesk", sans-serif; letter-spacing: -.2px; color: var(--head); text-decoration: none; display: inline-flex; align-items: center; gap: 9px; }
+    .mb-title::before { content: ""; width: 10px; height: 10px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 12px rgba(var(--ac), .7); }
+    .top-actions { display: flex; align-items: center; gap: 8px; }
+    .mb-title { white-space: nowrap; }
+    @media (max-width: 360px) { .mb-title { font-size: 0; gap: 0; } }
+    .ta-btn {
+      width: 36px; height: 36px; display: inline-grid; place-items: center; padding: 0; cursor: pointer; text-decoration: none;
+      color: var(--text-2); background: transparent; border: 1px solid var(--line-strong); border-radius: 50%;
+      transition: color .25s, border-color .25s, background .25s, transform .3s var(--ease);
+    }
+    .ta-btn:hover { color: var(--accent); border-color: rgba(var(--ac), .5); transform: translateY(-1px); }
+    .ta-discord { color: #8b9cff; border-color: rgba(139, 156, 255, .35); }
+    .ta-discord:not([href]) { cursor: default; }
+    .ta-discord:hover { color: #fff; background: #5865f2; border-color: #5865f2; }
+    .ta-store {
+      display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 16px 0 13px; border-radius: 999px; text-decoration: none;
+      font: 600 13px Inter, sans-serif; color: var(--bg); background: var(--accent); border: 1px solid var(--accent);
+      transition: transform .3s var(--ease), box-shadow .3s;
+    }
+    .ta-store:hover { transform: translateY(-1px); box-shadow: 0 10px 28px -10px rgba(var(--ac), .8); }
+    :root[data-theme="light"] .ta-store { color: #fff; }
+    .theme-toggle { width: 36px; height: 36px; padding: 0; }
+    .theme-label, .theme-wrap { display: none; }
+    .mb-search { display: none; }
+    .sidebar > h1 { display: none; }
+    /* the menu button: top-left on every screen size */
+    .sidebar-toggle {
+      position: fixed !important; top: 0 !important; bottom: auto !important; left: 0 !important; width: 52px !important; height: 52px !important;
+      padding: 0 !important; z-index: 70 !important; display: flex !important; flex-direction: column; align-items: center; justify-content: center; background: transparent !important;
+    }
+    .sidebar-toggle span { margin: 2px 0 !important; width: 18px !important; }
+    @media (min-width: 769px) {
+      .sidebar { top: 52px !important; }
+      .markdown-section { padding-top: 76px; }
+      .toolbar { top: 62px; }
+    }
     @media (max-width: 768px) {
-      /* top bar: menu | title | search | theme */
-      .mobile-bar {
-        display: flex; align-items: center; position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 55; padding: 0 0 0 58px;
-        background: var(--panel); border-bottom: 1px solid var(--line);
-        backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
-      }
-      .mb-title { font: 700 15px "Space Grotesk", sans-serif; letter-spacing: -.2px; color: var(--head); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
-      .mb-title::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 10px rgba(var(--ac), .7); }
-      .mb-search {
-        position: absolute; right: 56px; top: 9px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer;
-        color: var(--text-2); background: transparent; border: 1px solid var(--line-strong); border-radius: 50%;
-      }
-      .sidebar-toggle {
-        position: fixed !important; top: 0 !important; bottom: auto !important; left: 0 !important; width: 52px !important; height: 52px !important;
-        padding: 0 !important; z-index: 70 !important; display: flex !important; flex-direction: column; align-items: center; justify-content: center; background: transparent !important;
-      }
-      .sidebar-toggle span { margin: 2px 0 !important; width: 18px !important; }
-      .theme-wrap { top: 9px; right: 12px; z-index: 70; }
-      .theme-toggle { width: 34px; height: 34px; padding: 0; justify-content: center; }
-      .theme-label { display: none; }
+      .mobile-bar { padding: 0 12px 0 58px; }
+      .top-actions { gap: 6px; }
+      .mb-search { display: inline-grid; }
+      .ta-store { width: 36px; padding: 0; justify-content: center; }
+      .ta-store span { display: none; }
       .markdown-section { padding: 72px 18px 80px; }
       .markdown-section h1 { font-size: 2rem; background: none; -webkit-text-fill-color: var(--head); color: var(--head); }
       .toolbar { top: 62px; }
@@ -677,9 +713,7 @@
       body.close .sidebar { transform: none !important; box-shadow: 0 0 60px rgba(0, 0, 0, .55); }
       body.close .content { transform: none !important; }
       .content { left: 0 !important; padding-top: 0 !important; }
-      .sidebar-foot { padding-bottom: 14px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
+    }    @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
       .reveal { opacity: 1; transform: none; }
     }
@@ -1130,8 +1164,8 @@
             var old = root.querySelector('.page-foot'); if (old) old.remove();
             var f = document.createElement('div'); f.className = 'page-foot';
             if (/^#\/?(\?|$)/.test(location.hash) === false && root.querySelector('h1') && /^Page not found/.test(root.querySelector('h1').textContent)) return;
-            var edit = '<a href="https://github.com/LySoon/rotd_tebexwiki/edit/main/' + page + '.md" target="_blank" rel="noopener">Edit this page &#8599;</a>';
-            var render = function () { f.innerHTML = (verInfo && verInfo.updated ? '<span>Last updated ' + verInfo.updated + '</span>' : '') + edit; };
+            var store = '<a class="store-link" href="https://rogue-of-the-dead-rp.tebex.io/" target="_blank" rel="noopener">Get ROTD on Tebex &#8599;</a>';
+            var render = function () { f.innerHTML = (verInfo && verInfo.updated ? '<span>Last updated ' + verInfo.updated + '</span>' : '<span></span>') + store; };
             render(); root.appendChild(f);
             if (!verInfo) fetch('version.json').then(function (r) { return r.json(); }).then(function (j) { verInfo = j; render(); }).catch(function () {});
           }
@@ -1253,34 +1287,25 @@
           });
 
           hook.mounted(function () {
-            var foot = document.createElement('div');
-            foot.className = 'sidebar-foot';
-            foot.innerHTML = '<a href="https://github.com/LySoon/rotd_tebexwiki" target="_blank" rel="noopener">View on GitHub &#8599;</a>'
-;
-            var tt = document.createElement('div'); tt.className = 'theme-wrap';
-            tt.innerHTML = '<button type="button" class="theme-toggle" aria-label="Toggle light and dark theme" title="Toggle light / dark theme"><svg class="i-sun" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg><svg class="i-moon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.8 5.8 0 1 0 7.1 7.1z"/></svg><span class="theme-label"></span></button>';
-            document.body.appendChild(tt);
-
-            // phone top bar (CSS only shows it on small screens)
+            // top bar: menu | title ........ [search] [Discord] [Tebex] [light/dark]
+            var DISCORD_URL = '';   // <-- paste your Discord invite here, e.g. 'https://discord.gg/yourcode' (empty = button shown, no link yet)
+            var TEBEX_URL = 'https://rogue-of-the-dead-rp.tebex.io/';
             var mb = document.createElement('div'); mb.className = 'mobile-bar';
-            mb.innerHTML = '<a class="mb-title" href="#/">ROTD Wiki</a><button type="button" class="mb-search" aria-label="Find an export"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.6 10.6 14 14"/></svg></button>';
-            mb.querySelector('.mb-search').addEventListener('click', openPalette);
-            document.body.appendChild(mb);
-            // the menu button lives inside <main> (its own stacking layer), which hid it under the new bar: move it out
+            mb.innerHTML = '<a class="mb-title" href="#/">ROTD Wiki</a><div class="top-actions"></div>';
+            var acts = mb.querySelector('.top-actions');
+            var add = function (html) { var w = document.createElement('div'); w.innerHTML = html; var el = w.firstChild; acts.appendChild(el); return el; };
+            add('<button type="button" class="ta-btn mb-search" aria-label="Find an export" title="Find an export (Ctrl K)"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.6 10.6 14 14"/></svg></button>').addEventListener('click', openPalette);
+            add('<a class="ta-btn ta-discord"' + (DISCORD_URL ? ' href="' + DISCORD_URL + '" target="_blank" rel="noopener"' : ' role="link" aria-disabled="true"') + ' aria-label="Discord: support tickets and questions" title="Discord: support tickets and questions' + (DISCORD_URL ? '' : ' (link coming soon)') + '"><svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor"><path d="M20.317 4.3698a19.7913 19.7913 0 00-4.8851-1.5152.0741.0741 0 00-.0785.0371c-.211.3753-.4447.8648-.6083 1.2495-1.8447-.2762-3.68-.2762-5.4868 0-.1636-.3933-.4058-.8742-.6177-1.2495a.077.077 0 00-.0785-.037 19.7363 19.7363 0 00-4.8852 1.515.0699.0699 0 00-.0321.0277C.5334 9.0458-.319 13.5799.0992 18.0578a.0824.0824 0 00.0312.0561c2.0528 1.5076 4.0413 2.4228 5.9929 3.0294a.0777.0777 0 00.0842-.0276c.4616-.6304.8731-1.2952 1.226-1.9942a.076.076 0 00-.0416-.1057c-.6528-.2476-1.2743-.5495-1.8722-.8923a.077.077 0 01-.0076-.1277c.1258-.0943.2517-.1923.3718-.2914a.0743.0743 0 01.0776-.0105c3.9278 1.7933 8.18 1.7933 12.0614 0a.0739.0739 0 01.0785.0095c.1202.099.246.1981.3728.2924a.077.077 0 01-.0066.1276 12.2986 12.2986 0 01-1.873.8914.0766.0766 0 00-.0407.1067c.3604.698.7719 1.3628 1.225 1.9932a.076.076 0 00.0842.0286c1.961-.6067 3.9495-1.5219 6.0023-3.0294a.077.077 0 00.0313-.0552c.5004-5.177-.8382-9.6739-3.5485-13.6604a.061.061 0 00-.0312-.0286zM8.02 15.3312c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9555-2.4189 2.157-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.9555 2.4189-2.1569 2.4189zm7.9748 0c-1.1825 0-2.1569-1.0857-2.1569-2.419 0-1.3332.9554-2.4189 2.1569-2.4189 1.2108 0 2.1757 1.0952 2.1568 2.419 0 1.3332-.946 2.4189-2.1568 2.4189z"/></svg></a>');
+            add('<a class="ta-store" href="' + TEBEX_URL + '" target="_blank" rel="noopener" title="Get ROTD on Tebex"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 5h11l-1 8.5h-9L2.5 5zM5.5 5V4a2.5 2.5 0 0 1 5 0v1"/></svg><span>Tebex</span></a>');
+            var tb = add('<button type="button" class="ta-btn theme-toggle" aria-label="Toggle light and dark theme" title="Toggle light / dark theme"><svg class="i-sun" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg><svg class="i-moon" viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.8 5.8 0 1 0 7.1 7.1z"/></svg></button>');
+            tb.addEventListener('click', function () { applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); });
+            document.body.appendChild(mb);            // the menu button lives inside <main> (its own stacking layer), which hid it under the new bar: move it out
             var tg0 = document.querySelector('.sidebar-toggle'); if (tg0) document.body.appendChild(tg0);
             // on a phone the menu closes itself after you pick a page or tap the page behind it
             document.addEventListener('click', function (e) {
               if (innerWidth > 768 || !document.body.classList.contains('close')) return;
               if (e.target.closest('.sidebar a') || e.target.closest('.content')) { var tg = document.querySelector('.sidebar-toggle'); if (tg) tg.click(); }
             });
-            var sb = document.querySelector('.sidebar'); if (sb) sb.appendChild(foot);
-            var tb = tt.querySelector('.theme-toggle'), tl = tt.querySelector('.theme-label');
-            var sync = function () { tl.textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light'; };
-            sync();
-            tb.addEventListener('click', function () {
-              applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); sync();
-            });
-
             var kbd = document.createElement('kbd'); kbd.textContent = '/';
             var s = document.querySelector('.sidebar .search'); if (s) s.appendChild(kbd);
             var fb = document.createElement('button'); fb.type = 'button'; fb.className = 'find-export';
