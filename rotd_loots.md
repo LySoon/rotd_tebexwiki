@@ -6,27 +6,89 @@ Searchable loot props and containers, plus the "loot sense" scan.
 
 Loot sense outlines nearby lootable props for a while (default key `Z`, command `rotd_lootsense`).
 
-| Export | Input | Returns |
+#### `TriggerLootSense(silent)`
+
+Triggers a scan. Respects the cooldown.
+
+| Parameter | Type | Description |
 |---|---|---|
-| `TriggerLootSense(silent)` | `silent` boolean | triggers a scan (respects the cooldown) |
-| `SetLootSenseBonus(distanceBonus, durationBonus, cooldownScale)` | `distanceBonus` and `durationBonus` are **added** to the config values, `cooldownScale` **multiplies** the cooldown (0.5 = half). `nil` leaves a value unchanged | nothing |
-| `GetLootSenseState()` | | `{ active, onCooldown, remaining, distance, duration, cooldown }` (`remaining` in seconds) |
+| `silent` | `boolean?` | `true` suppresses the notification. |
+
+**Returns** nothing.
+
+<details>
+<summary>Example</summary>
 
 ```lua
--- client: a skill that improves loot sense
+exports.rotd_loots:TriggerLootSense(true)
+```
+
+</details>
+
+#### `SetLootSenseBonus(distanceBonus, durationBonus, cooldownScale)`
+
+Changes loot sense for the local player, for example from a skill. Pass `nil` to leave a value unchanged.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `distanceBonus` | `number?` | **Added** to the configured scan distance (meters). |
+| `durationBonus` | `number?` | **Added** to the configured duration (seconds). |
+| `cooldownScale` | `number?` | **Multiplies** the cooldown. `0.5` = half. |
+
+**Returns** nothing.
+
+<details>
+<summary>Example</summary>
+
+```lua
+-- a skill that improves loot sense
 exports.rotd_loots:SetLootSenseBonus(15.0, 4.0, 0.5)   -- +15 m, +4 s, half cooldown
 -- remove the bonus
 exports.rotd_loots:SetLootSenseBonus(0.0, 0.0, 1.0)
+```
 
+</details>
+
+#### `GetLootSenseState()`
+
+**Returns** `table`:
+
+| Field | Type | Description |
+|---|---|---|
+| `active` | `boolean` | A scan is running. |
+| `onCooldown` | `boolean` | Waiting for the cooldown. |
+| `remaining` | `number` | Seconds left (of the scan or the cooldown). |
+| `distance` | `number` | Current scan distance. |
+| `duration` | `number` | Current scan duration. |
+| `cooldown` | `number` | Current cooldown length. |
+
+<details>
+<summary>Example</summary>
+
+```lua
 local state = exports.rotd_loots:GetLootSenseState()
 if not state.onCooldown then exports.rotd_loots:TriggerLootSense(true) end
 ```
 
+</details>
+
 ## Shared export (client and server)
 
-### `GetAllLootProps()`
-- **Returns:** `table` array of every prop definition from `Config.AlwaysInteractableProps` and `Config.LootSpawns`.
-- Handy for map tools or no-build rules that need every lootable prop position.
+#### `GetAllLootProps()`
+
+Every prop definition from `Config.AlwaysInteractableProps` and `Config.LootSpawns`. Handy for map tools or no-build rules that need every lootable prop position.
+
+**Returns** `table[]`: array of prop definitions.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local props = exports.rotd_loots:GetAllLootProps()
+print(#props, 'lootable props')
+```
+
+</details>
 
 ## Optional integrations
 

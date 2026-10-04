@@ -2,17 +2,36 @@
 
 ## rotd_events
 
-### `GetActiveVehicles()` (server)
-- **Returns:** array of entity handles for the helicopter and ground vehicle the event system currently owns.
-- Used by `vehicle_spawner` so its cleanup sweep leaves them alone.
+### Server exports
+
+#### `GetActiveVehicles()`
+
+Lists the vehicles the event system currently owns. Used by `vehicle_spawner` so its cleanup sweep leaves them alone.
+
+**Returns** `number[]`: entity handles of the helicopter and ground vehicle the event system owns.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local vehicles = exports.rotd_events:GetActiveVehicles()
+```
+
+</details>
 
 ## rotd_mystery_merchant
 
-### `GetActiveVehicles()` (server)
-- **Returns:** `{ vehicle }` for the merchant's current vehicle, or `{}`.
+### Server exports
+
+#### `GetActiveVehicles()`
+
+**Returns** `table`: `{ vehicle }` for the merchant's current vehicle, or `{}` when none.
+
+<details>
+<summary>Example</summary>
 
 ```lua
--- server: keep other resources' vehicles out of your own cleanup
+-- keep other resources' vehicles out of your own cleanup
 local keep = {}
 for _, res in ipairs({ 'rotd_events', 'rotd_mystery_merchant' }) do
     if GetResourceState(res) == 'started' then
@@ -20,3 +39,5 @@ for _, res in ipairs({ 'rotd_events', 'rotd_mystery_merchant' }) do
     end
 end
 ```
+
+</details>

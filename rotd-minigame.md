@@ -2,17 +2,36 @@
 
 Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire splice and more. **Client side only.**
 
-Types: `lockpick`, `keypad_matrix`, `keypad_wave`, `safedial`, `wiresplice`, `crowbar`, `fusebox`, `lever`, `valve`, `floorboard`, `repairpanel`, `cablecut`, `nutsbolts`, `bite_dodge`, `struggle`, `syringe`, `hotwire`, `cutting`. Difficulty is `1` to `7`.
+**Types:** `lockpick`, `keypad_matrix`, `keypad_wave`, `safedial`, `wiresplice`, `crowbar`, `fusebox`, `lever`, `valve`, `floorboard`, `repairpanel`, `cablecut`, `nutsbolts`, `bite_dodge`, `struggle`, `syringe`, `hotwire`, `cutting`.
 
-## `startMinigameSync(type, difficulty, timeLimit)`
+**Difficulty** is `1` to `7`.
+
+## Client exports
+
+#### `startMinigameSync(type, difficulty, timeLimit)`
 
 Blocks the calling thread until the minigame ends.
 
-- **Input:** `type` (string), `difficulty` (1 to 7), `timeLimit` (seconds, optional; omitted or 0 = no time limit)
-- **Returns:** `success` (boolean), `reason` (string, e.g. `'timeout'`, `'died'`, `'failed'`, `'busy'`), `stage` (string or `nil`, the stage it ended on for multi-stage games)
-- A game that is rejected because another one is active or the type is invalid returns `false, 'busy'`.
-- **Must run in a thread** (`CreateThread`, a command handler, an event handler), never at the top level of a file.
-- Dying or being downed during the game ends it as a loss (`'died'`, no fail lockout).
+> **Must run in a thread** (`CreateThread`, a command handler, an event handler), never at the top level of a file.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `type` | `string` | One of the types above. |
+| `difficulty` | `number` | `1` to `7`. |
+| `timeLimit` | `number?` | Seconds. Omitted or `0` means no time limit. |
+
+**Returns** three values:
+
+| Position | Type | Description |
+|---|---|---|
+| 1 | `boolean` | `success`. |
+| 2 | `string` | `reason`, e.g. `'timeout'`, `'died'`, `'failed'`, `'busy'`. |
+| 3 | `string \| nil` | `stage`: the stage it ended on, for multi-stage games. |
+
+A game rejected because another one is active, or because the type is invalid, returns `false, 'busy'`. Dying or being downed during the game ends it as a loss (`'died'`, no fail lockout).
+
+<details>
+<summary>Example</summary>
 
 ```lua
 CreateThread(function()
@@ -25,18 +44,31 @@ CreateThread(function()
 end)
 ```
 
-## `startMinigame(type, difficulty, timeLimit, callback)`
+</details>
 
-Non-blocking version.
+#### `startMinigame(type, difficulty, timeLimit, callback)`
 
-- **Input:** same as above plus `callback(success, reason, stage)`. `(type, difficulty, callback)` also works.
-- **Returns:** `boolean` accepted (`false` when busy or invalid). The callback fires later.
+Non-blocking version. `(type, difficulty, callback)` also works.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `type` | `string` | One of the types above. |
+| `difficulty` | `number` | `1` to `7`. |
+| `timeLimit` | `number?` | Seconds. Omitted or `0` means no time limit. |
+| `callback` | `function` | `callback(success, reason, stage)`, fires when the game ends. |
+
+**Returns** `boolean`: `true` when accepted, `false` when busy or invalid. The callback fires later.
+
+<details>
+<summary>Example</summary>
 
 ```lua
 exports['rotd-minigame']:startMinigame('syringe', 3, 20, function(success, reason, stage)
     print(success, reason, stage)
 end)
 ```
+
+</details>
 
 ## Side effects worth knowing
 

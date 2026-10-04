@@ -1,9 +1,9 @@
 # rotd_zones
 
-Everything other resources and server developers can use. Call exports with `exports.rotd_zones:Name(...)` (or `exports['rotd_zones']:Name(...)`).
+Zones, radiation, resistance, infection hooks and zombie names. Call exports with `exports.rotd_zones:Name(...)` (or `exports['rotd_zones']:Name(...)`).
 
-**Side** tells you where to call it: **client** = from a client script, **server** = from a server script.
-`rotd_zones` depends on no zombie, medical, HUD or sound resource. Anything that needs outside data (zombie names, infection state, cure, cough reactions) is a registration export below.
+> **Side.** The badge on each export tells you where to call it: **client** from a client script, **server** from a server script, **shared** from either.
+> `rotd_zones` depends on no zombie, medical, HUD or sound resource. Anything that needs outside data (zombie names, infection state, cure, cough reactions) is a **registration export** further down.
 
 ## Index
 
@@ -12,12 +12,12 @@ Everything other resources and server developers can use. Call exports with `exp
 | `GetZones` | client | all zones |
 | `GetZonePlayerin` | client | zone the player is in now |
 | `GetCurrentZone` | client | zone card data for the current zone |
-| `GetZoneAtCoords` | client, server | zone at a position |
-| `GetZoneInfoAtCoords` | client, server | full zone info at a position |
+| `GetZoneAtCoords` | shared | zone at a position |
+| `GetZoneInfoAtCoords` | shared | full zone info at a position |
 | `GetZoneSpawnInfoAtCoords` | client | spawn info (classes, peds, multipliers) |
 | `CheckCoordsZoneType` | client | zone type for a ped |
 | `CheckCoordsZoneTypeCoords` | client | zone summary at a position |
-| `CheckCoordsZoneTypeCoordsRules` | client, server | rules at a position |
+| `CheckCoordsZoneTypeCoordsRules` | shared | rules at a position |
 | `IsCoordsInGreenZone` | server | safezone test |
 | `IsBaseBuildingAllowedAtCoords` | server | base building rule at a position |
 | `GetZoneExtraLoot` | server | extra loot of a zombie class in a zone |
@@ -32,91 +32,468 @@ Everything other resources and server developers can use. Call exports with `exp
 | `IsNightTime`, `SetGlobalWeatherAmbient`, `SetGlobalWeatherPostFX` | client | day/night and weather layers |
 | `RebuildMapOverlays` | client | redraw the map zone overlays |
 
----
+## Zones (client)
 
-## Zones
+#### `GetZones()`
 
-### `GetZones()` (client)
-- **Returns:** `table` of every created zone (internal zone objects, read only).
+Lists every zone that was created. The objects are internal and **read only**.
 
-### `GetZonePlayerin()` (client)
-- **Returns:** `table` `{ key, name, zombie_intensity, type, rules }` for the zone the player is in. Outside any zone: `name = 'None'`, `type = 'None'`, default rules.
+**Returns** `table`: every created zone.
 
-### `GetCurrentZone()` (client)
-- **Returns:** `table|nil` the data the zone card shows: `{ zoneData = {...}, sufferedRadiation, displaySettings }`, or `nil` outside zones.
+<details>
+<summary>Example</summary>
 
-### `GetZoneAtCoords(coords)` (client and server)
-- **Input:** `coords` (vector3, or any table with `x`, `y`)
-- **Returns:** `table|nil` `{ key, name, type, rules, intensity, priority }`. Overlapping zones: the highest priority wins.
+```lua
+for _, zone in pairs(exports.rotd_zones:GetZones()) do
+    -- inspect only, do not modify
+end
+```
 
-### `GetZoneInfoAtCoords(coords)` (client and server)
-- **Returns:** `table|nil` zone info with polygon data. Client: `{ name, type, rules, intensity, zombie_classes, dimensions, points2D, points3D }`. Server: `{ key, name, type, rules, intensity, dimensions, points2D }`.
+</details>
 
-### `GetZoneSpawnInfoAtCoords(coords)` (client)
-- **Returns:** `table|nil` `{ key, name, type, intensity, classes, peds, noSleep, damageMult, healthMult, armorAdd }`. Meant for a zombie spawner: allowed classes plus ped models per class. Loot is deliberately not included, see `GetZoneExtraLoot`.
+#### `GetZonePlayerin()`
 
-### `CheckCoordsZoneType(ped)` (client)
-- **Returns:** `string|false` zone type (`'red'`, `'yellow'`, `'green'`, `'radiation'`, ...) or `false`.
+The zone the local player is standing in right now.
 
-### `CheckCoordsZoneTypeCoords(coords)` (client)
-- **Returns:** `table|false` `{ key, name, type, rules, intensity }` or `false`.
+**Returns** `table`: `{ key, name, zombie_intensity, type, rules }`. Outside any zone the result has `name = 'None'`, `type = 'None'` and the default rules.
 
-### `CheckCoordsZoneTypeCoordsRules(coords)` (client and server)
-- **Returns:** `table` the zone's rules, or the defaults outside any zone. Rules are booleans: `baseBuilding`, `baseRaiding`, `PvP`, `Weapons`, `blackout` (plus any key you add in config).
+<details>
+<summary>Example</summary>
 
-### `IsCoordsInGreenZone(coords)` (server)
-- **Returns:** `boolean`
+```lua
+local zone = exports.rotd_zones:GetZonePlayerin()
+print(zone.name, zone.type) -- e.g. "Fort Zancudo", "red"
+```
 
-### `IsBaseBuildingAllowedAtCoords(coords)` (server)
-- **Returns:** `boolean allowed`, `string|nil zoneName`, `string|nil zoneKey`
+</details>
 
-### `GetZoneExtraLoot(zoneKey, class)` (server)
-- **Input:** `zoneKey` (key in `Config.Zones`), `class` (zombie class key)
-- **Returns:** `table|nil` the `extraloot` list of that class in that zone. Server only so clients cannot touch loot.
+#### `GetCurrentZone()`
 
----
+The data the zone card displays for the current zone.
+
+**Returns** `table | nil`: `{ zoneData = {...}, sufferedRadiation, displaySettings }`, or `nil` outside zones.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local card = exports.rotd_zones:GetCurrentZone()
+if card then print('radiation dose', card.sufferedRadiation) end
+```
+
+</details>
+
+#### `GetZoneSpawnInfoAtCoords(coords)`
+
+Spawn information for a zombie spawner: which classes may spawn and which ped models each class uses. Loot is deliberately **not** included, see `GetZoneExtraLoot`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position to look up. |
+
+**Returns** `table | nil`: `{ key, name, type, intensity, classes, peds, noSleep, damageMult, healthMult, armorAdd }`.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local info = exports.rotd_zones:GetZoneSpawnInfoAtCoords(GetEntityCoords(PlayerPedId()))
+if info then
+    for _, class in ipairs(info.classes) do print('may spawn', class) end
+end
+```
+
+</details>
+
+#### `CheckCoordsZoneType(ped)`
+
+Zone type for a ped.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `ped` | `number` | Ped entity handle. |
+
+**Returns** `string | false`: the zone type (`'red'`, `'yellow'`, `'green'`, `'radiation'`, ...) or `false` outside zones.
+
+<details>
+<summary>Example</summary>
+
+```lua
+if exports.rotd_zones:CheckCoordsZoneType(PlayerPedId()) == 'green' then
+    -- safezone
+end
+```
+
+</details>
+
+#### `CheckCoordsZoneTypeCoords(coords)`
+
+Short zone summary at a position.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position to look up. |
+
+**Returns** `table | false`: `{ key, name, type, rules, intensity }`, or `false` outside zones.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local z = exports.rotd_zones:CheckCoordsZoneTypeCoords(coords)
+if z then print(z.name, z.intensity) end
+```
+
+</details>
+
+## Zones (shared)
+
+Available on both the client and the server.
+
+#### `GetZoneAtCoords(coords)`
+
+Finds the zone at a position. When zones overlap, the one with the highest priority wins.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3 \| table` | Position. A table with `x` and `y` also works. |
+
+**Returns** `table | nil`: `{ key, name, type, rules, intensity, priority }`, or `nil` when no zone matches.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local zone = exports.rotd_zones:GetZoneAtCoords(vector3(215.0, -810.0, 30.0))
+if zone then print(zone.name, zone.priority) end
+```
+
+</details>
+
+#### `GetZoneInfoAtCoords(coords)`
+
+Full zone info including the polygon data. The returned fields differ per side.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3 \| table` | Position. |
+
+**Returns** `table | nil`:
+
+| Side | Fields |
+|---|---|
+| client | `name`, `type`, `rules`, `intensity`, `zombie_classes`, `dimensions`, `points2D`, `points3D` |
+| server | `key`, `name`, `type`, `rules`, `intensity`, `dimensions`, `points2D` |
+
+<details>
+<summary>Example</summary>
+
+```lua
+local info = exports.rotd_zones:GetZoneInfoAtCoords(coords)
+if info then print(#info.points2D, 'polygon points') end
+```
+
+</details>
+
+#### `CheckCoordsZoneTypeCoordsRules(coords)`
+
+The rules that apply at a position, or the defaults outside any zone.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** `table`: booleans `baseBuilding`, `baseRaiding`, `PvP`, `Weapons`, `blackout`, plus any key you add in the config.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local rules = exports.rotd_zones:CheckCoordsZoneTypeCoordsRules(GetEntityCoords(PlayerPedId()))
+if not rules.baseBuilding then print('no building here') end
+```
+
+</details>
+
+## Zones (server)
+
+#### `IsCoordsInGreenZone(coords)`
+
+Safezone test.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** `boolean`: `true` when the position is inside a green zone.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local isGreen = exports.rotd_zones:IsCoordsInGreenZone(GetEntityCoords(GetPlayerPed(src)))
+```
+
+</details>
+
+#### `IsBaseBuildingAllowedAtCoords(coords)`
+
+Whether the zone at a position allows base building.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** three values:
+
+| Position | Type | Description |
+|---|---|---|
+| 1 | `boolean` | `true` when building is allowed. |
+| 2 | `string \| nil` | Zone name. |
+| 3 | `string \| nil` | Zone key. |
+
+<details>
+<summary>Example</summary>
+
+```lua
+local allowed, zoneName = exports.rotd_zones:IsBaseBuildingAllowedAtCoords(coords)
+if not allowed then print('blocked by', zoneName) end
+```
+
+</details>
+
+#### `GetZoneExtraLoot(zoneKey, class)`
+
+Extra loot a zombie class drops in a zone. Server only so clients cannot touch loot.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `zoneKey` | `string` | Key in `Config.Zones`. |
+| `class` | `string` | Zombie class key. |
+
+**Returns** `table | nil`: the `extraloot` list of that class in that zone.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local loot = exports.rotd_zones:GetZoneExtraLoot('fort_zancudo', 'military_tank')
+```
+
+</details>
 
 ## No-build gate (client)
 
-Base building is blocked near rotd_blips landmarks and POIs. Radii come from `Config.NoBuild`.
+Base building is blocked near `rotd_blips` landmarks and POIs. Radii come from `Config.NoBuild`.
 
-- `CanBuildAtCoords(coords)` returns `boolean allowed`, `string|nil reason` (`'blip'` / `'poi'`), `number|nil distance`
-- `GetNoBuildMessage(reason)` returns `string` (player-facing text from `Config.NoBuild.Messages`)
-- `GetNoBuildInfo(coords)` returns `{ allowed, reason, distance, message }`
-- `IsNoBuildReady()` returns `boolean` (the point index is built)
+#### `CanBuildAtCoords(coords)`
 
----
+Checks whether building is allowed at a position.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** three values:
+
+| Position | Type | Description |
+|---|---|---|
+| 1 | `boolean` | `true` when building is allowed. |
+| 2 | `string \| nil` | Block reason: `'blip'` or `'poi'`. |
+| 3 | `number \| nil` | Distance to the blocking point. |
+
+<details>
+<summary>Example</summary>
+
+```lua
+local ok, reason, dist = exports.rotd_zones:CanBuildAtCoords(coords)
+if not ok then print('blocked by', reason, dist) end
+```
+
+</details>
+
+#### `GetNoBuildMessage(reason)`
+
+Player-facing text for a block reason.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `reason` | `string` | `'blip'` or `'poi'`. |
+
+**Returns** `string`: the text from `Config.NoBuild.Messages`.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local _, reason = exports.rotd_zones:CanBuildAtCoords(coords)
+if reason then print(exports.rotd_zones:GetNoBuildMessage(reason)) end
+```
+
+</details>
+
+#### `GetNoBuildInfo(coords)`
+
+Everything about the no-build check in one table.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** `table`: `{ allowed, reason, distance, message }`.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local info = exports.rotd_zones:GetNoBuildInfo(coords)
+if not info.allowed then print(info.message) end
+```
+
+</details>
+
+#### `IsNoBuildReady()`
+
+**Returns** `boolean`: `true` once the point index is built. Wait for it before relying on the other no-build exports.
+
+<details>
+<summary>Example</summary>
+
+```lua
+while not exports.rotd_zones:IsNoBuildReady() do Wait(250) end
+```
+
+</details>
 
 ## Radiation (client)
 
-The dose is a number from 0 up (the indicator treats 2500 as full). It lives on the player's client.
+The dose is a number from `0` up (the indicator treats `2500` as full). It lives on the player's client.
 
-### `AddRadiation(amount, applyResist, pierce)`
-- **Input:** `amount` (number, ignored if 0 or less), `applyResist` (boolean, `false` ignores clothing resistance), `pierce` (0 to 1, share of the resistance this dose ignores; `0.3` means a 20% resistance only resists 14%)
-- **Returns:** `number` the new total
-- Use this for doses from other resources. It applies resistance for you, and it is safe next to the zone and decay loops (it adds a delta).
+#### `AddRadiation(amount, applyResist, pierce)`
 
-### `SetRadiation(value)`
-- Sets the absolute dose (cures, admin tools). **Returns:** `number`
+Adds a dose. Use this for doses coming from other resources: it applies resistance for you and is safe next to the zone and decay loops (it adds a delta).
 
-### `GetSufferedRadiation()`
-- **Returns:** `number` current dose.
+| Parameter | Type | Description |
+|---|---|---|
+| `amount` | `number` | Dose to add. Ignored when `0` or less. |
+| `applyResist` | `boolean?` | `false` ignores clothing resistance. Default applies it. |
+| `pierce` | `number?` | `0` to `1`, the share of the resistance this dose ignores. `0.3` means a 20% resistance only resists 14%. |
 
-### `GetRadiationInfo()`
-- **Returns:** `{ dose, resistance, inRadiationZone, maxHealth, maxStamina }`
+**Returns** `number`: the new total dose.
 
-### `GetRadiationDebuffs()`
-- **Returns:** `{ maxhealth, maxstamina }` the current tier limits.
+<details>
+<summary>Example</summary>
 
-### `RadiationZone(inside, zonedata)`
-- Internal: starts/stops the zone dose loop. Called by the zone detection, you normally never call it.
+```lua
+exports.rotd_zones:AddRadiation(25.0)             -- resisted by clothing
+exports.rotd_zones:AddRadiation(25.0, false)      -- raw dose, ignores resistance
+exports.rotd_zones:AddRadiation(25.0, true, 0.3)  -- a bite: ignores 30% of the resistance
+```
 
-### Resistance
-Resistance is a percentage (0 to 100). It comes from worn clothing (`Config.RadiationResistance.clothing`, entries saved by `/setradcloth`, inventory items with `metadata.radiationResistance`) plus modifiers below.
+</details>
 
-- `GetRadiationResistance()` returns `number` (0 to `Config.RadiationResistance.cap`)
-- `AddResistanceModifier(id, percent, label)` returns `boolean`. `id` is any string you choose, `label` shows in the resistance notification. The same id replaces its value. It counts like a clothing slot: summed with the rest and capped.
-- `RemoveResistanceModifier(id)` returns `boolean`
+#### `SetRadiation(value)`
+
+Sets the absolute dose. For cures and admin tools.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `number` | The new dose. |
+
+**Returns** `number`: the dose after the change.
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:SetRadiation(0) -- fully cured
+```
+
+</details>
+
+#### `GetSufferedRadiation()`
+
+**Returns** `number`: the current dose.
+
+<details>
+<summary>Example</summary>
+
+```lua
+if exports.rotd_zones:GetSufferedRadiation() > 1000 then
+    -- heavily irradiated
+end
+```
+
+</details>
+
+#### `GetRadiationInfo()`
+
+**Returns** `table`: `{ dose, resistance, inRadiationZone, maxHealth, maxStamina }`.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local info = exports.rotd_zones:GetRadiationInfo()
+print(info.dose, info.resistance, info.inRadiationZone)
+```
+
+</details>
+
+#### `GetRadiationDebuffs()`
+
+**Returns** `table`: `{ maxhealth, maxstamina }`, the limits of the current radiation tier.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local d = exports.rotd_zones:GetRadiationDebuffs()
+print(d.maxhealth, d.maxstamina)
+```
+
+</details>
+
+#### `RadiationZone(inside, zonedata)`
+
+> **Internal.** Starts or stops the zone dose loop. The zone detection calls it, you normally never do.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `inside` | `boolean` | Whether the player is inside a radiation zone. |
+| `zonedata` | `table` | The zone data. |
+
+**Returns** nothing.
+
+#### `GetRadiationResistance()`
+
+Resistance is a percentage (`0` to `100`). It comes from worn clothing (`Config.RadiationResistance.clothing`, entries saved by `/setradcloth`, inventory items with `metadata.radiationResistance`) plus the modifiers below.
+
+**Returns** `number`: `0` up to `Config.RadiationResistance.cap`.
+
+<details>
+<summary>Example</summary>
+
+```lua
+print(('resisting %d%%'):format(exports.rotd_zones:GetRadiationResistance()))
+```
+
+</details>
+
+#### `AddResistanceModifier(id, percent, label)`
+
+Adds a temporary resistance bonus. It counts like a clothing slot: summed with the rest and capped.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string` | Any id you choose. Using the same id again replaces its value. |
+| `percent` | `number` | Resistance in percent. |
+| `label` | `string` | Name shown in the resistance notification. |
+
+**Returns** `boolean`
+
+<details>
+<summary>Example</summary>
 
 ```lua
 -- an anti-radiation pill: +30% for 5 minutes
@@ -124,44 +501,117 @@ exports.rotd_zones:AddResistanceModifier('antirad_pill', 30, 'Anti-Rad Pill')
 SetTimeout(5 * 60000, function() exports.rotd_zones:RemoveResistanceModifier('antirad_pill') end)
 ```
 
----
+</details>
+
+#### `RemoveResistanceModifier(id)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string` | The id used in `AddResistanceModifier`. |
+
+**Returns** `boolean`
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:RemoveResistanceModifier('antirad_pill')
+```
+
+</details>
 
 ## Radiation (server)
 
-- `SetPlayerRadiation(src, value)` returns `boolean`: sets the dose on that player's client.
-- `AddPlayerRadiation(src, amount, applyResistance, pierce)` returns `boolean`: adds a dose (resistance applied unless `applyResistance == false`).
-- `GetPlayerRadiation(src)` returns `number`: the last dose the client saved (every few minutes, on logout and on resource stop), so it can lag behind. Stored in `charinfo.radiation` on QB/Qbox and in `rotd_player_data` on ESX.
+#### `SetPlayerRadiation(src, value)`
 
----
+Sets the dose on that player's client.
 
-## Infection and guards
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `value` | `number` | The new dose. |
 
-Guard NPCs in green zones can detect, investigate and cure infected players. `rotd_zones` does not track infection itself. The medical/disease resource connects it with one detection export (client) and one cure export (server). With neither registered the guard infection checks simply never trigger.
+**Returns** `boolean`
 
-### Detection (client): use ONE of the two
-
-**`RegisterInfectionDetector(fn)`**: `fn()` is called about once a second and returns:
+<details>
+<summary>Example</summary>
 
 ```lua
-{
-    infected = true,   -- boolean, is the player infected
-    level    = 4,      -- number, infection level; 0 = none; guards escalate with the level (an escort joins at 7 and up)
-    immune   = false,  -- boolean, immune players are ignored
-}
+exports.rotd_zones:SetPlayerRadiation(src, 0)
 ```
-Returns `boolean`. Errors inside `fn` are ignored.
 
-**`SetInfectionState(state)`**: push the same table whenever it changes. Returns `boolean`.
+</details>
 
-### Cure (server)
+#### `AddPlayerRadiation(src, amount, applyResistance, pierce)`
 
-**`RegisterInfectionCure(fn)`**: `fn(src)` is called when a guard finishes curing a player. Returns the number of registered handlers. Requests are limited to one per 20 seconds per player. Afterwards the player's client is told to clear any pushed infection state.
+Adds a dose to a player. Resistance is applied unless `applyResistance == false`.
 
-The server event `rotd_zones:infectionCured` (`src`) also fires, for resources that prefer events.
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `amount` | `number` | Dose to add. |
+| `applyResistance` | `boolean?` | `false` ignores resistance. |
+| `pierce` | `number?` | `0` to `1`, share of resistance ignored. |
+
+**Returns** `boolean`
+
+<details>
+<summary>Example</summary>
 
 ```lua
--- wasabi_ambulance example
--- client
+exports.rotd_zones:AddPlayerRadiation(src, 120.0) -- e.g. a grenade
+```
+
+</details>
+
+#### `GetPlayerRadiation(src)`
+
+The last dose the client saved. It is saved every few minutes, on logout and on resource stop, so it can **lag behind**. Stored in `charinfo.radiation` on QB/Qbox and in `rotd_player_data` on ESX.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `number`: the last saved dose.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local saved = exports.rotd_zones:GetPlayerRadiation(src)
+```
+
+</details>
+
+## Infection and guards (client)
+
+Guard NPCs in green zones can detect, investigate and cure infected players. `rotd_zones` does not track infection itself. The medical/disease resource connects it with **one detection export (client)** and **one cure export (server)**. With neither registered the guard infection checks simply never trigger.
+
+Use **one** of the two detection exports.
+
+#### `RegisterInfectionDetector(fn)`
+
+Registers a function that is called about once a second. Errors inside `fn` are ignored.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `fn` | `function` | Returns the infection state table described below. |
+
+`fn` returns:
+
+| Field | Type | Description |
+|---|---|---|
+| `infected` | `boolean` | Whether the player is infected. |
+| `level` | `number` | Infection level, `0` = none. Guards escalate with the level (an escort joins at `7` and up). |
+| `immune` | `boolean` | Immune players are ignored. |
+
+**Returns** `boolean`
+
+<details>
+<summary>Example</summary>
+
+```lua
+-- client (wasabi_ambulance example)
 exports.rotd_zones:RegisterInfectionDetector(function()
     return {
         infected = exports.wasabi_ambulance:IsInfected() and true or false,
@@ -169,18 +619,58 @@ exports.rotd_zones:RegisterInfectionDetector(function()
         immune   = exports.wasabi_ambulance:IsImmune() and true or false,
     }
 end)
+```
+
+</details>
+
+> Register again in the client event `rotd_zones:ready` so a restart of `rotd_zones` does not lose the registration.
+
+#### `SetInfectionState(state)`
+
+Push-style alternative: send the same table whenever it changes.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `state` | `table` | `{ infected, level, immune }`, same as above. |
+
+**Returns** `boolean`
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:SetInfectionState({ infected = true, level = 4, immune = false })
+```
+
+</details>
+
+## Infection cure (server)
+
+#### `RegisterInfectionCure(fn)`
+
+Registers the handler that runs when a guard finishes curing a player. Requests are limited to one per 20 seconds per player. Afterwards the player's client is told to clear any pushed infection state. The server event `rotd_zones:infectionCured` (`src`) also fires, for resources that prefer events.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `fn` | `function` | `fn(src)`, called with the cured player's server id. |
+
+**Returns** `number`: how many handlers are registered.
+
+<details>
+<summary>Example</summary>
+
+```lua
 -- server
 exports.rotd_zones:RegisterInfectionCure(function(src)
     exports.wasabi_ambulance:CureInfection(src)
 end)
 ```
-Register again in the client event `rotd_zones:ready` so a restart of `rotd_zones` does not lose the registration.
 
----
+</details>
 
 ## Zombie names on zone cards (client)
 
-Zone cards show player-facing names instead of class keys such as `military_tank`.
+Zone cards show player-facing names instead of class keys such as `military_tank`. The map is `class id -> display name`:
 
 ```lua
 -- key   = class id used in a zone's zombie_classes list (Config.Zones[...].zombie_classes)
@@ -192,31 +682,154 @@ Zone cards show player-facing names instead of class keys such as `military_tank
     rad_beamer    = 'Radiation Beamer',
 }
 ```
+
 A class without a name shows its key in Title Case. Static names can also go in `Config.ZombieLabels`.
 
-- `RegisterZombieLabels(map)` returns `number` accepted. Existing keys are overwritten, others kept.
-- `RegisterZombieLabel(class, label)` returns `boolean`
-- `GetZombieLabels()` returns a copy of the table
+#### `RegisterZombieLabels(map)`
 
----
+Registers many names at once. Existing keys are overwritten, others kept.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `map` | `table` | `{ [classKey] = 'Display name' }`. |
+
+**Returns** `number`: how many entries were accepted.
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:RegisterZombieLabels({ normal = 'Walker', sprinter = 'Runner' })
+```
+
+</details>
+
+#### `RegisterZombieLabel(class, label)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `class` | `string` | Class key. |
+| `label` | `string` | Display name. |
+
+**Returns** `boolean`
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:RegisterZombieLabel('military_tank', 'Juggernaut')
+```
+
+</details>
+
+#### `GetZombieLabels()`
+
+**Returns** `table`: a copy of the label table.
+
+<details>
+<summary>Example</summary>
+
+```lua
+local labels = exports.rotd_zones:GetZombieLabels()
+print(labels.normal)
+```
+
+</details>
 
 ## Cough (client)
 
-When radiation makes the player cough, other resources can react (for example zombies hear it).
+When radiation makes the player cough, other resources can react (for example zombies hear it). The client event `rotd_zones:cough` carries `coords` (`vector3`).
 
-- Event `rotd_zones:cough` with `coords` (vector3)
-- `RegisterCoughHandler(callback)` returns `number` of handlers. `callback(coords)` runs on every cough, errors are ignored.
+#### `RegisterCoughHandler(callback)`
 
----
+| Parameter | Type | Description |
+|---|---|---|
+| `callback` | `function` | `callback(coords)` runs on every cough. Errors are ignored. |
+
+**Returns** `number`: how many handlers are registered.
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:RegisterCoughHandler(function(coords)
+    print('cough at', coords)
+end)
+```
+
+</details>
 
 ## Environment (client)
 
-- `IsNightTime()` returns `boolean` (true from 20:00 to 06:00 game time)
-- `SetGlobalWeatherAmbient(mod, instant)`: sets the map-wide timecycle layer. `mod` is a timecycle modifier name (string) or `nil` to clear; a zone's own ambient wins over it. `instant = true` skips the cross-fade.
-- `SetGlobalWeatherPostFX(list)`: replaces the map-wide post FX set. `list` is an array of effect names; effects no longer listed are stopped. Radiation effects are never touched.
-- `RebuildMapOverlays()`: redraws every zone's map overlay from `Config.Zones` (call after changing zones at runtime).
+#### `IsNightTime()`
 
----
+**Returns** `boolean`: `true` from 20:00 to 06:00 game time.
+
+<details>
+<summary>Example</summary>
+
+```lua
+if exports.rotd_zones:IsNightTime() then
+    -- night behaviour
+end
+```
+
+</details>
+
+#### `SetGlobalWeatherAmbient(mod, instant)`
+
+Sets the map-wide timecycle layer. A zone's own ambient wins over it.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `mod` | `string \| nil` | Timecycle modifier name, or `nil` to clear. |
+| `instant` | `boolean?` | `true` skips the cross-fade. |
+
+**Returns** nothing.
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:SetGlobalWeatherAmbient('REDMIST', false)
+exports.rotd_zones:SetGlobalWeatherAmbient(nil)  -- clear
+```
+
+</details>
+
+#### `SetGlobalWeatherPostFX(list)`
+
+Replaces the map-wide post FX set. Effects no longer listed are stopped. Radiation effects are never touched.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `list` | `string[]` | Array of effect names. |
+
+**Returns** nothing.
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:SetGlobalWeatherPostFX({ 'DrugsMichaelAliensFight' })
+```
+
+</details>
+
+#### `RebuildMapOverlays()`
+
+Redraws every zone's map overlay from `Config.Zones`. Call it after changing zones at runtime.
+
+**Returns** nothing.
+
+<details>
+<summary>Example</summary>
+
+```lua
+exports.rotd_zones:RebuildMapOverlays()
+```
+
+</details>
 
 ## Events
 
@@ -230,9 +843,15 @@ When radiation makes the player cough, other resources can react (for example zo
 | `rotd_zones:setradiation` | client | `value` | server sets the dose (used by `SetPlayerRadiation`) |
 | `rotd_zones:addradiation` | client | `amount, applyResist, pierce` | server adds a dose (used by `AddPlayerRadiation`) |
 
-Note: the net event `rotd_zones:setradiation` (server) from older versions still exists and lets any client set another player's radiation. Prefer the server exports above; the event is kept only for compatibility.
+```lua
+-- client: react to zones
+AddEventHandler('rotd_zones:enteredZone', function(zone)
+    print('entered', zone.name, zone.type, zone.rules.PvP)
+end)
+AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
+```
 
----
+> **Compatibility note.** The net event `rotd_zones:setradiation` (server) from older versions still exists and lets any client set another player's radiation. Prefer the server exports above; the event is kept only for compatibility.
 
 ## Commands
 
@@ -246,36 +865,3 @@ Note: the net event `rotd_zones:setradiation` (server) from older versions still
 ## Configuration pointers
 
 `config.lua`: `Config.Zones`, `Config.ZoneUI` (built-in zone UI: `builtin`, `builtinStyle`, `showHint`), `Config.RadiationUI` (indicator style, position, `showResistance`), `Config.RadiationDamageFX`, `Config.RadiationDamageScale`, `Config.RadiationResistance`, `Config.ZombieLabels`, `Config.NoBuild`, `Config.Sounds`.
-
----
-
-## Examples
-
-```lua
--- client: react to zones
-AddEventHandler('rotd_zones:enteredZone', function(zone)
-    print('entered', zone.name, zone.type, zone.rules.PvP)
-end)
-AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
-
--- client: is building allowed where the player stands?
-local rules = exports.rotd_zones:CheckCoordsZoneTypeCoordsRules(GetEntityCoords(PlayerPedId()))
-if not rules.baseBuilding then print('no building here') end
-
--- client: give radiation from your own source (resistance is applied for you)
-exports.rotd_zones:AddRadiation(25.0)             -- resisted by clothing
-exports.rotd_zones:AddRadiation(25.0, false)      -- raw dose, ignores resistance
-exports.rotd_zones:AddRadiation(25.0, true, 0.3)  -- a bite: ignores 30% of the resistance
-
--- server: irradiate a player (e.g. a grenade) and read the last saved dose
-exports.rotd_zones:AddPlayerRadiation(src, 120.0)
-local saved = exports.rotd_zones:GetPlayerRadiation(src)
-
--- client: temporary resistance (an anti-radiation pill)
-exports.rotd_zones:AddResistanceModifier('antirad_pill', 30, 'Anti-Rad Pill')
-SetTimeout(5 * 60000, function() exports.rotd_zones:RemoveResistanceModifier('antirad_pill') end)
-
--- server: is this spot a safezone? may the player build here?
-local isGreen = exports.rotd_zones:IsCoordsInGreenZone(GetEntityCoords(GetPlayerPed(src)))
-local allowed, zoneName = exports.rotd_zones:IsBaseBuildingAllowedAtCoords(coords)
-```
