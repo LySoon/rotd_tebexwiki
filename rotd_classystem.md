@@ -103,7 +103,7 @@ local mult = exports.rotd_classystem:GetPlayerModifier(src, 'meleeDamage')
 <summary>Example</summary>
 
 ```lua
-if exports.rotd_classystem:HasMinimumModifier(src, 'runSpeed', 1.2) then
+if exports.rotd_classystem:HasMinimumModifier(src, 'movementSpeed', 1.2) then
     -- fast runner
 end
 ```
@@ -123,7 +123,7 @@ end
 <summary>Example</summary>
 
 ```lua
-local has = exports.rotd_classystem:HasSkillUnlocked(src, 'combat::brawler::1')
+local has = exports.rotd_classystem:HasSkillUnlocked(src, 'weapon_mastery::quick_reload::1')
 ```
 
 </details>
@@ -141,7 +141,7 @@ local has = exports.rotd_classystem:HasSkillUnlocked(src, 'combat::brawler::1')
 <summary>Example</summary>
 
 ```lua
-local bonus = exports.rotd_classystem:GetSkillEffectValue(src, 'someSkillEffect')
+local bonus = exports.rotd_classystem:GetSkillEffectValue(src, 'reloadSpeed')
 ```
 
 </details>
@@ -159,8 +159,8 @@ local bonus = exports.rotd_classystem:GetSkillEffectValue(src, 'someSkillEffect'
 <summary>Example</summary>
 
 ```lua
-local mult = exports.rotd_classystem:GetPlayerModifier(src, 'meleeDamage')
-if exports.rotd_classystem:GetSkillEffectBool(src, 'someSkillEffect') then mult = mult * 1.1 end
+-- medics with the Drag Revive skill may move slowly while reviving
+local canMoveWhileReviving = exports.rotd_classystem:GetSkillEffectBool(src, 'mobileRevive')
 ```
 
 </details>
@@ -304,7 +304,7 @@ Awards XP for a configured action. **Authorised.**
 <summary>Example</summary>
 
 ```lua
-local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'craft_item', { item = 'bandage' })
+local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'engineer_craft')
 ```
 
 </details>
@@ -447,7 +447,7 @@ print(info.class, info.level)
 
 ```lua
 -- run faster for runners
-local speed = exports.rotd_classystem:GetPlayerModifier('runSpeed')
+local speed = exports.rotd_classystem:GetPlayerModifier('movementSpeed')
 SetRunSprintMultiplierForPlayer(PlayerId(), math.min(1.49, speed))
 ```
 
@@ -479,7 +479,7 @@ local mods = exports.rotd_classystem:GetPlayerAllModifiers()
 <summary>Example</summary>
 
 ```lua
-local fast = exports.rotd_classystem:HasMinimumModifier('runSpeed', 1.2)
+local fast = exports.rotd_classystem:HasMinimumModifier('movementSpeed', 1.2)
 ```
 
 </details>
@@ -496,7 +496,7 @@ local fast = exports.rotd_classystem:HasMinimumModifier('runSpeed', 1.2)
 <summary>Example</summary>
 
 ```lua
-local v = exports.rotd_classystem:GetEffectValue('someSkillEffect')
+local v = exports.rotd_classystem:GetEffectValue('reloadSpeed')
 ```
 
 </details>
@@ -513,7 +513,7 @@ local v = exports.rotd_classystem:GetEffectValue('someSkillEffect')
 <summary>Example</summary>
 
 ```lua
-if exports.rotd_classystem:GetSkillEffectBool('someSkillEffect') then
+if exports.rotd_classystem:GetSkillEffectBool('mobileRevive') then
     -- effect is on
 end
 ```
@@ -627,3 +627,199 @@ exports.rotd_classystem:PlaySkillVisualStage('adrenaline_rush', 'start')
 ```
 
 </details>
+
+## Data shapes
+
+### Classes
+
+Five classes exist: `mercenary`, `medic`, `engineer`, `gatherer`, `citizen` (`'none'` before one is chosen). Max level is `Config.MaxLevel` (100).
+
+### Modifiers
+
+A modifier is a multiplier (`1.0` = normal). `GetPlayerModifier` returns the class base **plus** the skill bonuses. These names exist on every class:
+
+| Modifier | Skill effect key that adds to it |
+|---|---|
+| `meleeDamage` | `meleeDamageBonus` |
+| `rangedDamage` | `rangedDamageBonus` |
+| `movementSpeed` | `movementSpeedBonus` |
+| `buildingSpeed` | `buildSpeedBonus` |
+| `lootQuantity` | `lootQuantityBonus` |
+| `healingPower` | `healingPowerBonus` |
+| `reviveSpeed` | `reviveSpeedBonus` |
+| `stealth` | `stealthBonus` |
+| `armor` | `armorBonus` |
+| `staminaMax` | `staminaMaxBonus` |
+| `staminaRegen` | `staminaRegenBonus` |
+
+### Skill keys and effects
+
+A skill is identified as `branchId::skillId::tier`, for example `weapon_mastery::quick_reload::1` (mercenary) or `trauma_response::drag_revive::1` (medic).
+
+Each skill carries `effects`. Effects of all unlocked skills are flattened into one table: **numbers are added together, booleans become `true` if any unlocked skill sets them**.
+
+```lua
+-- two unlocked skills each give healingSpeed
+-- { healingSpeed = 0.25 }  +  { healingSpeed = 0.30 }   ->   healingSpeed = 0.55
+
+-- examples of real effect keys
+reloadSpeed = 0.15        -- number
+recoilReduction = 0.10    -- number
+ammoDropChance = 0.10     -- number
+mobileRevive = true       -- boolean (medic, Drag Revive)
+instantBleedStop = true   -- boolean
+mobileHealing = true      -- boolean
+```
+
+### `GetPlayerClassInfo` result
+
+```lua
+{
+    class = 'medic',
+    level = 12,
+    xp = 5400,
+    modifiers = { meleeDamage = 0.4, rangedDamage = 1.0, healingPower = 1.3, movementSpeed = 0.7, armor = 10 },   -- plus the rest
+    effects = { mobileRevive = true, reloadSpeed = 0.15 },
+    unlockedSkills = { 'trauma_response::drag_revive::1' },   -- array of skill keys
+    -- server only:
+    allClasses = { medic = { level = 12, xp = 5400 }, mercenary = { level = 3, xp = 600 } },
+}
+```
+
+## Config-owned gameplay XP (`AwardActionExperience`)
+
+Lets any script grant class XP without hard-coding classes, amounts or rules. The rules live in `Config.GameplayXP` (shared config):
+
+```lua
+Config.GameplayXP = {
+    requireSelectedClass = true,            -- the player must currently have that class
+    actions = {
+        medic_revive = {
+            enabled    = true,
+            className  = 'medic',
+            xp         = 150,
+            cooldownMs = 3000,              -- per player
+            dedupeMs   = 10000,             -- collapse duplicate calls with the same dedupeKey
+            ignoreSelf = true,              -- ignore context.target == the player
+        },
+        engineer_craft = { enabled = true, className = 'engineer', xp = 60 },
+        gatherer_loot  = { enabled = true, className = 'gatherer', xp = 35, cooldownMs = 1000 },
+    },
+}
+```
+
+`Config.GameplayXP.actions` is empty by default: define your actions first. The calling resource must be in `Config.TrustedServerResources` (an empty list trusts every resource).
+
+`context` keys: `target` (another player's server id), `dedupeKey` (string).
+
+Return values `(boolean, reason)`:
+
+| Result | Meaning |
+|---|---|
+| `true, 'awarded'` | XP given |
+| `false, 'action_not_configured'` | key not in `Config.GameplayXP.actions` (or `enabled = false`) |
+| `false, 'wrong_selected_class'` | player has another class selected |
+| `false, 'self_target_ignored'` | `ignoreSelf` and the target is the player |
+| `false, 'duplicate_action'` | same `dedupeKey` inside `dedupeMs` |
+| `false, 'cooldown_active'` | `cooldownMs` has not passed |
+| `false, 'award_failed'` | internal failure |
+| `false, 'unauthorized'` | calling resource is not trusted |
+| `false, 'rate_limited'` | too many calls |
+| `false, 'invalid_request'` / `'invalid_player'` | bad arguments / player not loaded |
+
+## Events
+
+### Public
+
+| Event | Side | Payload | Use |
+|---|---|---|---|
+| `rotd_classystem:client:openClassSelector` | client (also `TriggerClientEvent` from the server) | `{ gender = 0 \| 1 \| 'male' \| 'female', isFirstTime = true \| false }` (both optional) | opens the class selector |
+| `rotd_classystem:server:skillActivated` | server (listen) | `src, skillId, args` | an active skill was activated (logging, analytics) |
+| `rotd:crouchChanged` | client (trigger from your crouch script) | `isCrouching` boolean | tells the class system the player crouches (stealth) |
+
+### Client events to listen to
+
+`rotd_classystem:client:applyWithLevel (className, level)`, `updateXP (xp, level, className)`, `onClassExperienceGain (amount, xp, level, className)`, `onClassLevelUp (oldLevel, newLevel, className)`, `receiveSkillPoints`, `receiveClassesData`, `forceReapplyModifiers (className, level)`.
+
+## Recipes
+
+### Passive bonus: scale melee damage by the class modifier (server)
+
+```lua
+-- server: a weapon damage event you already handle
+AddEventHandler('weaponDamageEvent', function(sender, data)
+    local src = tonumber(sender)
+    if not src then return end
+
+    local mult = exports.rotd_classystem:GetPlayerModifier(src, 'meleeDamage')
+    if mult ~= 1.0 then
+        -- apply mult to the damage you are about to deal
+        print(('player %d melee multiplier %.2f'):format(src, mult))
+    end
+end)
+```
+
+### Gate a feature behind a skill (server)
+
+```lua
+-- only medics who unlocked Drag Revive may drag while reviving
+local function canDragWhileReviving(src)
+    return exports.rotd_classystem:GetSkillEffectBool(src, 'mobileRevive')
+end
+
+-- or check the exact skill
+local has = exports.rotd_classystem:HasSkillUnlocked(src, 'trauma_response::drag_revive::1')
+```
+
+### Grant class XP when something happens (server)
+
+```lua
+-- 1. add the action to Config.GameplayXP.actions (see above)
+-- 2. call it from your script on success
+RegisterNetEvent('myrevive:server:revived', function(targetSrc)
+    local src = source
+    local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'medic_revive', {
+        target = targetSrc,
+        dedupeKey = ('revive:%d:%d'):format(src, targetSrc),
+    })
+    if not ok then print('no XP:', reason) end
+end)
+```
+
+### Client: speed up with the movement modifier
+
+```lua
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local speed = exports.rotd_classystem:GetPlayerModifier('movementSpeed')
+        SetRunSprintMultiplierForPlayer(PlayerId(), math.min(1.49, math.max(1.0, speed)))
+    end
+end)
+```
+
+### Client: open the class selector for a new character
+
+```lua
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    if exports.rotd_classystem:GetPlayerClass() == 'none' then
+        exports.rotd_classystem:OpenClassSelector({ isFirstTime = true })
+    end
+end)
+```
+
+### Active skill from your own resource
+
+```lua
+-- client: trigger a skill and read its cooldown
+if not exports.rotd_classystem:IsSkillOnCooldown('some_skill_id') then
+    exports.rotd_classystem:ActivateSkill('some_skill_id')
+else
+    print('ready in', exports.rotd_classystem:GetSkillCooldownRemaining('some_skill_id'), 's')
+end
+
+-- server: react to every activation
+AddEventHandler('rotd_classystem:server:skillActivated', function(src, skillId, args)
+    print(('player %d used %s'):format(src, skillId))
+end)
+```

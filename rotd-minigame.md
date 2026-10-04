@@ -74,3 +74,43 @@ end)
 
 - Items needed for a type (lockpicks, etc.) are consumed through the resource's own server events according to its config (`consumeOnFail`, `consumeOnFailChance`).
 - On **success**, the resource reports the minigame to `npc_guide` (`TrackMinigame`) when that resource runs, and pays XP to the ROTD HUD when it runs. Both are optional.
+
+## Recipes
+
+### A lock that needs a lockpick minigame (client)
+
+```lua
+local function tryOpenDoor(doorId)
+    CreateThread(function()
+        local ok, reason = exports['rotd-minigame']:startMinigameSync('lockpick', 4, 30)
+        if ok then
+            TriggerServerEvent('mydoors:server:unlock', doorId)
+        elseif reason == 'busy' then
+            lib.notify({ description = 'Finish what you are doing first', type = 'error' })
+        elseif reason == 'timeout' then
+            lib.notify({ description = 'Too slow', type = 'error' })
+        else
+            lib.notify({ description = 'The lock held', type = 'error' })   -- 'failed', 'died', ...
+        end
+    end)
+end
+```
+
+### Several stages in a row (client)
+
+```lua
+CreateThread(function()
+    local ok = exports['rotd-minigame']:startMinigameSync('wiresplice', 3)        -- no time limit
+    if not ok then return end
+    ok = exports['rotd-minigame']:startMinigameSync('keypad_matrix', 4, 25)
+    if ok then print('vault open') end
+end)
+```
+
+### Callback style, no thread needed (client)
+
+```lua
+exports['rotd-minigame']:startMinigame('syringe', 3, 20, function(success, reason, stage)
+    if success then print('injected') else print('failed at', stage or '?', reason) end
+end)
+```

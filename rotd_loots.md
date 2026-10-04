@@ -93,3 +93,33 @@ print(#props, 'lootable props')
 ## Optional integrations
 
 Containers with a minigame requirement call `rotd-minigame` (`startMinigameSync`), see [[rotd-minigame]].
+
+## Recipes
+
+### Loot sense skill (client)
+
+```lua
+-- apply a bonus while the skill is active, remove it afterwards
+local function setLootSenseSkill(active)
+    if active then
+        exports.rotd_loots:SetLootSenseBonus(15.0, 4.0, 0.5)     -- +15 m, +4 s, half the cooldown
+    else
+        exports.rotd_loots:SetLootSenseBonus(0.0, 0.0, 1.0)      -- back to the config values
+    end
+end
+
+-- auto scan when a skill triggers it
+local state = exports.rotd_loots:GetLootSenseState()
+if not state.onCooldown and not state.active then
+    exports.rotd_loots:TriggerLootSense(true)                    -- silent
+else
+    print(('loot sense ready in %d s'):format(state.remaining))
+end
+```
+
+### Draw your own markers on every lootable prop
+
+```lua
+local props = exports.rotd_loots:GetAllLootProps()
+print(('%d lootable props'):format(#props))
+```

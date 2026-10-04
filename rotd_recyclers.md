@@ -61,3 +61,14 @@ exports.rotd_recyclers:ClearNotifications()
 ```
 
 </details>
+
+## Recipes
+
+```lua
+-- client: tell the player something in the recycler style
+exports.rotd_recyclers:ShowNotification('Recycler', 'Output ready', 'success', 5000)    -- title, message, type, timeout in ms
+exports.rotd_recyclers:ShowNotification('Recycler', 'Out of fuel', 'error')              -- default timeout
+
+-- clear all of them (leaving a recycler)
+exports.rotd_recyclers:ClearNotifications()
+```

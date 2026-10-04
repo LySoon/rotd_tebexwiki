@@ -112,3 +112,25 @@ local dist = exports.rotd_leaderboard:GetPlayerDistanceTravel(cid)
 ```
 
 </details>
+
+## Recipes
+
+### Veteran check and a top list (server)
+
+```lua
+RegisterCommand('mystats', function(src)
+    local cid = GetCidBySource(src)                        -- your own cid lookup
+    print(('zombies today %d | total %d | pvp redzone %d | tags %d | streak %d days | %.2f travelled'):format(
+        exports.rotd_leaderboard:GetZombieKillsPerDay(cid),
+        exports.rotd_leaderboard:GetZombieKillsTotal(cid),
+        exports.rotd_leaderboard:GetPvpKillsRedzone(cid),
+        exports.rotd_leaderboard:GetDogTagsCollected(cid),
+        exports.rotd_leaderboard:GetLongestSurvivalStreak(cid),
+        exports.rotd_leaderboard:GetPlayerDistanceTravel(cid)))
+end, false)
+
+-- unlock a title at 1000 kills (every export returns 0 for unknown players, so no nil check is needed)
+local function hasVeteranTitle(cid)
+    return exports.rotd_leaderboard:GetZombieKillsTotal(cid) >= 1000
+end
+```

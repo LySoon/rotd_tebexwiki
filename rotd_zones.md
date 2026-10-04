@@ -865,3 +865,182 @@ AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name)
 ## Configuration pointers
 
 `config.lua`: `Config.Zones`, `Config.ZoneUI` (built-in zone UI: `builtin`, `builtinStyle`, `showHint`), `Config.RadiationUI` (indicator style, position, `showResistance`), `Config.RadiationDamageFX`, `Config.RadiationDamageScale`, `Config.RadiationResistance`, `Config.ZombieLabels`, `Config.NoBuild`, `Config.Sounds`.
+
+## Data shapes
+
+### Zone types
+
+`'red'`, `'yellow'`, `'orange'`, `'green'` (safezone), `'radiation'`, `'death'`, `'white'`, `'gray'`, `'cyan'`.
+
+### Rules table
+
+```lua
+{ baseBuilding = true, baseRaiding = true, PvP = true, Weapons = true, blackout = false }   -- booleans
+-- outside any zone the default rules are returned (every rule true on the client)
+```
+
+### Zone info (`GetZoneAtCoords`)
+
+```lua
+{ key = 'AirportSafeZone', name = 'Airport Safe Zone', type = 'green', rules = { ... }, intensity = 0.0, priority = 10 }   -- key = the Config.Zones table key
+```
+
+### Spawn info (`GetZoneSpawnInfoAtCoords`, client)
+
+```lua
+{
+    key = '<Config.Zones key>', name = 'Military Base', type = 'red', intensity = 5.0,
+    classes = { 'normal', 'tank', 'shunter' },                 -- allowed zombie classes
+    peds = { normal = { `a_m_m_skater_01` }, tank = { ... } }, -- ped models per class
+    noSleep = false, damageMult = 1.8, healthMult = 2.5, armorAdd = 25,
+}
+```
+
+### Zone card data (`GetCurrentZone`, client)
+
+```lua
+{
+    zoneData = {
+        name = 'Military Base', type = 'red', zombie_intensity = 5.0,
+        zombie_classes = { 'normal', 'tank' }, zombie_class_labels = { 'Walker', 'Juggernaut' },
+        zombie_damage_mult = 1.8, zombie_health_mult = 2.5, zombie_armor_add = 25,
+        rules = { ... }, radiation = nil,       -- radiation = dose, only in radiation zones
+    },
+    sufferedRadiation = 340,                    -- nil when 0
+    displaySettings = { showName = true, showType = true, ... },   -- Config.ZoneUI
+}
+```
+
+### `GetRadiationInfo` (client)
+
+```lua
+{ dose = 340.5, resistance = 35, inRadiationZone = true, maxHealth = 180, maxStamina = 0.9 }
+```
+
+### Radiation clothing entry (`Config.RadiationResistance.clothing`, also `data/radiation_clothing.json`)
+
+```lua
+{ slot = 'mask', drawable = 175, texture = nil, gender = nil, res = 5, label = 'Dust Filtered Mask' }
+--  slot      mask | hat | glasses | ear | torso | jacket | tshirt | pants | hands | shoes | vest | accessory | decals | bag | watch | bracelet
+--            (or comp = <component id> / prop = <prop id> instead of slot)
+--  drawable  number or { numbers };  texture  number, { numbers } or nil = any;  gender  0 male / 1 female / nil = both
+```
+
+### Infection detector result
+
+```lua
+{ infected = true, level = 4, immune = false }    -- level 0 = none; an escort guard joins at level 7 and up
+```
+
+## Recipes
+
+### Radiation grenade (server + client)
+
+```lua
+-- server: irradiate everyone inside 15 m
+local function radiationBlast(coords)
+    for _, playerId in ipairs(GetPlayers()) do
+        local src = tonumber(playerId)
+        local ped = GetPlayerPed(src)
+        if #(GetEntityCoords(ped) - coords) < 15.0 then
+            exports.rotd_zones:AddPlayerRadiation(src, 150.0)          -- resistance is applied on the client
+        end
+    end
+end
+
+-- client: a bite that slips through the suit (ignores 30% of the resistance)
+exports.rotd_zones:AddRadiation(40.0, true, 0.3)
+```
+
+### Anti-radiation pill (client)
+
+```lua
+RegisterNetEvent('mypills:client:antirad', function()
+    exports.rotd_zones:AddResistanceModifier('antirad_pill', 30, 'Anti-Rad Pill')
+    SetTimeout(5 * 60000, function()
+        exports.rotd_zones:RemoveResistanceModifier('antirad_pill')
+    end)
+end)
+
+-- cure item: remove the dose
+RegisterNetEvent('mypills:client:radaway', function()
+    exports.rotd_zones:SetRadiation(0.0)
+end)
+```
+
+### React to zones (client)
+
+```lua
+AddEventHandler('rotd_zones:enteredZone', function(zone)
+    if zone.type == 'green' then
+        print('safezone, weapons allowed:', zone.rules.Weapons)
+    end
+end)
+AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
+
+-- the zone the player is in right now
+local zone = exports.rotd_zones:GetZonePlayerin()          -- zone.type == 'None' outside every zone
+```
+
+### Base building checks
+
+```lua
+-- server (authoritative)
+RegisterNetEvent('mybase:server:place', function(coords)
+    local src = source
+    local allowed, zoneName = exports.rotd_zones:IsBaseBuildingAllowedAtCoords(coords)
+    if not allowed then
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = ('No building in %s'):format(zoneName or 'this zone') })
+        return
+    end
+    -- place it
+end)
+
+-- client (for a nice preview colour)
+local ok, reason, distance = exports.rotd_zones:CanBuildAtCoords(GetEntityCoords(PlayerPedId()))
+if not ok then print(exports.rotd_zones:GetNoBuildMessage(reason)) end
+```
+
+### Connect a disease resource (infection guards)
+
+```lua
+-- client: the guards read this about once a second
+exports.rotd_zones:RegisterInfectionDetector(function()
+    local lvl = MyDisease.GetLevel()                       -- your own function
+    return { infected = lvl > 0, level = lvl, immune = MyDisease.IsImmune() }
+end)
+
+-- server: the guard cured the player
+exports.rotd_zones:RegisterInfectionCure(function(src)
+    MyDisease.Cure(src)                                    -- your own function
+end)
+
+-- keep it registered after a restart of rotd_zones
+AddEventHandler('rotd_zones:ready', function()
+    exports.rotd_zones:RegisterInfectionDetector(function() ... end)
+end)
+```
+
+### Register zombie names and react to coughs (client)
+
+```lua
+local function register()
+    exports.rotd_zones:RegisterZombieLabels({
+        normal = 'Walker', sprinter = 'Runner', tank = 'Juggernaut',
+        military_tank = 'Military Juggernaut', rad_beamer = 'Radiation Beamer',
+    })
+    exports.rotd_zones:RegisterCoughHandler(function(coords)
+        -- make noise at coords for your zombie AI
+    end)
+end
+AddEventHandler('rotd_zones:ready', register)
+CreateThread(function() Wait(1000) register() end)   -- in case rotd_zones started first
+```
+
+### Night-aware events
+
+```lua
+if exports.rotd_zones:IsNightTime() then
+    -- spawn the night variant
+end
+```

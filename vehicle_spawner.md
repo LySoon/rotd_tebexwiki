@@ -143,3 +143,46 @@ end
 ## Other resources' vehicles
 
 Vehicles owned by other ROTD resources are left alone by the cleanup: `rotd_events` and `rotd_mystery_merchant` export `GetActiveVehicles()`, see [[Small-Exports]].
+
+## Recipes
+
+### Protect an event vehicle from the cleanup sweep (server)
+
+```lua
+local veh = CreateVehicle(`sanchez`, coords.x, coords.y, coords.z, heading, true, true)
+Wait(500)
+exports.vehicle_spawner:ProtectVehicle(veh, true)
+
+-- when the event ends
+exports.vehicle_spawner:ProtectVehicle(veh, false)
+DeleteEntity(veh)
+```
+
+### A garage that stores and repairs (server)
+
+```lua
+RegisterNetEvent('mygarage:server:store', function(netId, plate)
+    exports.vehicle_spawner:PersistVehicleParts(netId, plate)      -- save part durability BEFORE deleting
+    DeleteEntity(NetworkGetEntityFromNetworkId(netId))
+end)
+
+RegisterNetEvent('mygarage:server:fullRepair', function(netId, plate)
+    exports.vehicle_spawner:RestoreVehiclePartsFull(netId, plate)
+end)
+```
+
+### Do not clean up right before a sweep (server)
+
+```lua
+local secs = exports.vehicle_spawner:GetNextCleanup()
+if secs and secs < 60 then
+    print(('cleanup in %d s, finish spawning later'):format(secs))
+end
+```
+
+### Zombie hits a car (client)
+
+```lua
+-- in the zombie system, when a zombie damages a vehicle
+exports.vehicle_spawner:zombieAttackedVehicle(NetworkGetNetworkIdFromEntity(vehicle))
+```

@@ -582,3 +582,177 @@ exports.rotd_squad:PingAt(GetEntityCoords(PlayerPedId()), 'mark')
 ## Optional integrations
 
 `rotd_squad` shows data from other ROTD resources when they run: class from `rotd_classystem` (`GetPlayerClass`), zombie kills from `rotd_leaderboard` (`GetZombieKillsTotal`), HUD notifications and friends list from the ROTD HUD. Each missing partner only disables its own part.
+
+## Data shapes
+
+### Squad table (`GetSquadByCid`)
+
+```lua
+{
+    id = 'squad_1730000000_4821',
+    leader = 'ABC12345',                 -- cid of the leader
+    name = 'Squad 4821',
+    created = 1730000000,                -- os.time()
+    friendlyFire = false,
+    members = {                          -- stored members
+        { citizenid = 'ABC12345', name = 'John Doe', level = 12, class = 'medic',
+          isLeader = true, joined = 1730000000, reputation = 520 },
+    },
+}
+```
+
+### Member list entry (`GetSquadMembers`, server and client)
+
+```lua
+{
+    citizenid = 'ABC12345',
+    name = 'John Doe',
+    level = 12,
+    class = 'medic',
+    isLeader = true,
+    online = true,
+    source = 14,                         -- server id, nil when offline
+    health = 187,                        -- 0 when offline
+    ping = 32,
+    infection = 0,                       -- 0..11
+    isMedic = true,
+    reputation = 520,
+    reputationColor = '#9ACD32',         -- hex, from the reputation scale
+    color = '#00FF88',                   -- name colour the player chose, nil = default
+    colorRgb = { 0, 255, 136 },
+    icon = nil,                          -- chosen emoji, nil = class icon
+    coords = { x = 215.0, y = -810.0, z = 30.0 },   -- nil when offline
+}
+```
+
+### Stats (`GetPlayerStats`)
+
+```lua
+{
+    zombie_kills = 0, player_kills = 0, deaths = 0, headshots = 0,
+    players_healed = 0, loot_gathered = 0, crafts_made = 0,
+    missions_completed = 0, vehicles_destroyed = 0, structures_destroyed = 0,
+    time_played = 0, distance_traveled = 0, survival_days = 0,
+    medals = {},          -- array of medal keys
+    achievements = {},    -- array of achievement keys
+}
+```
+
+### Reputation
+
+Reputation is a number from `-10000` to `10000`, new players start at `500`. `ModifyReputation(src, action, customAmount)` takes one of these action keys (amounts are in the squad config):
+
+| Action | Change | Action | Change |
+|---|---|---|---|
+| `heal` | +10 | `playerKill` | -100 |
+| `help` | +5 | `vehicleDestroy` | -30 |
+| `zombieKill` | +1 | `baseDestroy` | -100 |
+| `pveAction` | +1 | `baseDamage` | -20 |
+| `loot` | +1 | `steal` | -25 |
+| `craft` | +2 | `manual` | `customAmount` (a number) |
+| `missionComplete` | +10 | | |
+| `achievement` | +15 | | |
+
+Reputation names by value: Saint (9000+), Legend, Hero, Guardian, Sentinel, Protector, Samaritan, Trusted, Friendly (600+), **Neutral (400+, default)**, Suspicious, Shady, Untrusted (0+), Troublemaker, Aggressive, Violent, Hostile, Killer, Butcher, Monster, Demon (-9000 and below).
+
+### `GetPlayerFullData(cid)`
+
+The whole player record: `{ source, citizenid, name, level, class, reputation, stats, squadid, health, isMedic, ... }`. Treat unknown fields as internal.
+
+## Recipes
+
+### No damage between squad mates (server)
+
+```lua
+AddEventHandler('weaponDamageEvent', function(sender, data)
+    local attacker = tonumber(sender)
+    if not attacker or data.hitGlobalId == nil then return end
+
+    local victimEntity = NetworkGetEntityFromNetworkId(data.hitGlobalId)
+    if victimEntity == 0 or not IsPedAPlayer(victimEntity) then return end
+    local victim = NetworkGetEntityOwner(victimEntity)
+
+    if exports.rotd_squad:IsSquadMate(attacker, victim) then
+        CancelEvent()       -- friendly fire off (use the squad's friendlyFire flag if you want it optional)
+    end
+end)
+```
+
+### Reward the whole squad for a mission (server)
+
+```lua
+local function rewardSquad(src)
+    for _, cid in ipairs(exports.rotd_squad:GetSquadCitizenIds(src)) do
+        local member = GetSourceByCid(cid)         -- your own cid -> src lookup
+        if member then
+            exports.rotd_squad:AddMissionComplete(member)
+            exports.rotd_squad:ModifyReputation(member, 'missionComplete')
+        end
+    end
+end
+```
+
+### Penalise griefing (server)
+
+```lua
+AddEventHandler('mybase:server:structureDestroyed', function(destroyerSrc, ownerCid)
+    local destroyerCid = GetCidBySource(destroyerSrc)   -- your own lookup
+    exports.rotd_squad:AddStructureDestroy(destroyerSrc)
+    exports.rotd_squad:ModifyReputation(destroyerSrc, 'baseDestroy')
+
+    -- squad mates of the owner are allowed, even when the owner is offline
+    if exports.rotd_squad:AreCitizenIdsSquadMates(destroyerCid, ownerCid) then
+        exports.rotd_squad:ModifyReputation(destroyerSrc, 'manual', 100)   -- undo the penalty
+    end
+end)
+```
+
+### Door that squad mates may open (server + client)
+
+```lua
+-- server: authoritative
+RegisterNetEvent('mydoors:server:open', function(doorId)
+    local src = source
+    if exports.rotd_squad:HasBuildingAccess(src, doorId) then
+        TriggerClientEvent('mydoors:client:open', src, doorId)
+    end
+end)
+
+-- client: ask first, the export waits for the server (use a thread)
+CreateThread(function()
+    if exports.rotd_squad:CheckBuildingAccess(doorId, 3000) then
+        TriggerServerEvent('mydoors:server:open', doorId)
+    else
+        lib.notify({ description = 'No access', type = 'error' })
+    end
+end)
+```
+
+### Show squad mates on your own HUD (client)
+
+```lua
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if exports.rotd_squad:IsInSquad() then
+            for _, m in ipairs(exports.rotd_squad:GetSquadMembers()) do
+                if m.online and m.coords then
+                    print(m.name, m.health, m.reputationColor)
+                end
+            end
+        end
+    end
+end)
+
+-- ping a location for the squad
+exports.rotd_squad:PingAt(GetEntityCoords(PlayerPedId()), 'mark')
+```
+
+### Read a leaderboard-style summary (server)
+
+```lua
+local stats = exports.rotd_squad:GetSquadStats(src)      -- src (number) or cid (string)
+if stats then
+    print(stats.squadName, stats.memberCount, stats.online, stats.totals.zombie_kills)
+end
+```

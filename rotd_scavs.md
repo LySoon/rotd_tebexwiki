@@ -51,3 +51,26 @@ local old = exports.rotd_scavs:SwapScavWeapon(netId, 'weapon_carbinerifle', 120,
 ## Optional integrations
 
 `npc_guide` (kill tracking), the ROTD HUD (notifications) and a zombie resource (`ScavLootedZombie`) are used when running. Each missing partner only disables its own part.
+
+## Recipes
+
+### Make a scav pick up a better weapon (server)
+
+```lua
+-- netId of a scav you got from your own scav events
+local function upgradeScav(netId, weaponName, ammo, metadata)
+    local old = exports.rotd_scavs:SwapScavWeapon(netId, weaponName, ammo, metadata)
+    if old then
+        print('scav now carries', weaponName, 'and stowed', old)
+    else
+        print('not a scav, or it had no weapon')
+    end
+end
+
+-- stock a scav with supplies
+if exports.rotd_scavs:GiveToScav(netId, 'bandage', 2) then
+    print('given')
+else
+    print('netId is not a live scav')
+end
+```

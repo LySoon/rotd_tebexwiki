@@ -41,3 +41,40 @@ When a ROTD resource can cooperate with another one that may not be running, it 
 ## Examples in this wiki
 
 Examples are meant to be pasted into your own resource. They use plain Lua, no framework calls, unless the page says otherwise.
+
+## A complete example
+
+A resource that gives every player a bandage quest progress and radiation resistance bonus when they use a bandage item. Everything below is real, documented API.
+
+```lua
+-- server.lua
+RegisterNetEvent('mybandage:server:used', function()
+    local src = source
+
+    -- count it for quests listening for 'bandage_used'
+    if exports.npc_guide:TracksEvent(src, 'bandage_used') then
+        exports.npc_guide:TrackEvent(src, 'bandage_used', 1)
+    end
+
+    -- credit the stat
+    exports.rotd_squad:AddHealedPlayer(src, 1)
+    exports.rotd_squad:ModifyReputation(src, 'heal')
+
+    -- class XP, if you defined the action in Config.GameplayXP
+    local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'medic_revive')
+    if not ok and reason ~= 'wrong_selected_class' then print('XP:', reason) end
+end)
+```
+
+```lua
+-- client.lua
+RegisterNetEvent('mybandage:client:use', function()
+    local zone = exports.rotd_zones:GetZonePlayerin()
+    if zone.rules and zone.rules.Weapons == false then
+        -- safezone: use freely
+    end
+    exports.rotd_zones:AddResistanceModifier('bandage_buff', 5, 'Fresh Bandage')
+    SetTimeout(60000, function() exports.rotd_zones:RemoveResistanceModifier('bandage_buff') end)
+    TriggerServerEvent('mybandage:server:used')
+end)
+```

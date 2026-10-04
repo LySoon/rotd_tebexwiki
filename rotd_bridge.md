@@ -549,3 +549,60 @@ print(json.encode(health))
 ## Database check
 
 Runs once after start. It lists every running ROTD resource, creates missing tables declared with `rotd_sql '<file>'` (it reads the `CREATE TABLE` statements) and `rotd_player_data 'yes'`, reports missing columns and row counts. Re-run manually from the console: `rotdbridge db`.
+
+## Recipes
+
+### A complete small resource on the bridge (server)
+
+```lua
+-- fxmanifest.lua
+-- dependencies { 'ox_lib', 'rotd_bridge' }
+-- shared_script '@ox_lib/init.lua'
+-- shared_script '@rotd_bridge/init.lua'
+-- rotd_player_data 'yes'
+-- server_script 'server.lua'
+
+-- server.lua: works on QB, Qbox and ESX with any supported inventory
+Bridge.Framework.RegisterCommand('givehello', 'Count how many times you said hello', {}, function(src)
+    local n = (Bridge.Framework.GetCharValue(src, 'hello_count') or 0) + 1
+    Bridge.Framework.SetCharValue(src, 'hello_count', n)
+    TriggerClientEvent('ox_lib:notify', src, { description = ('hello #%d'):format(n) })
+end)
+
+-- items: count bandages on a player
+local function bandages(src)
+    local n = 0
+    for _, item in ipairs(Bridge.Inventory.GetItems(src)) do
+        if item.name == 'bandage' then n = n + item.count end
+    end
+    return n
+end
+```
+
+### Use another ROTD resource only when it runs (client)
+
+```lua
+local zones = Bridge.Optional('rotd_zones', {
+    feature = 'Safezone-aware weapons',
+    fallback = 'weapons are always allowed',
+})
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local zone = zones.call('GetZonePlayerin')              -- nil when rotd_zones is not running
+        if zone and zone.rules and zone.rules.Weapons == false then
+            DisablePlayerFiring(PlayerId(), true)
+        end
+    end
+end)
+```
+
+### Run code when a framework character loads (client)
+
+```lua
+Bridge.Framework.OnPlayerLoaded(function()
+    print('character loaded, gender', Bridge.Framework.GetGender())
+end)
+Bridge.Framework.OnPlayerUnloaded(function() print('character left') end)
+```
