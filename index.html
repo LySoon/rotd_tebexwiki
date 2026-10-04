@@ -281,6 +281,40 @@
     @keyframes unfold { from { opacity: 0; transform: translateY(-8px) scaleY(.96); } }
     .export-card details pre { margin-bottom: 4px; }
 
+    /* right-hand "On this page" */
+    #toc { display: none; }
+    @media (min-width: 1240px) {
+      .content { padding-right: 252px; }
+      .markdown-section { max-width: 840px; margin-left: auto; margin-right: auto; }
+      body.close .content { padding-right: 252px; }
+      #toc {
+        display: block; position: fixed; top: 44px; right: 28px; width: 216px; max-height: calc(100vh - 88px); overflow-y: auto; z-index: 6;
+        padding: 2px 0 2px 16px; border-left: 1px solid var(--line); scrollbar-width: none;
+        animation: rise .8s .15s var(--ease) both;
+      }
+      #toc::-webkit-scrollbar { display: none; }
+    }
+    #toc .toc-title { font: 600 10.5px/1 "Space Grotesk", sans-serif; letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted); margin: 0 0 14px 2px; }
+    #toc ul { list-style: none; margin: 0; padding: 0; }
+    #toc a {
+      display: block; position: relative; padding: 5px 8px; margin: 1px 0; border-radius: 7px; font-size: 13px; line-height: 1.35; color: var(--muted);
+      border: 0; text-decoration: none; transition: color .25s, background .25s, transform .3s var(--ease);
+    }
+    #toc a:hover { color: var(--head); transform: translateX(2px); }
+    #toc a.t2 { font-weight: 600; color: #aab3bf; }
+    #toc a.t3 { font-weight: 600; font-size: 12px; color: #6b7480; letter-spacing: .2px; margin-top: 6px; }
+    #toc a.t4 { font-family: "JetBrains Mono", monospace; font-size: 12px; padding-left: 14px; }
+    #toc a.on { color: var(--accent); background: var(--accent-soft); }
+    #toc a.on::before {
+      content: ""; position: absolute; left: -17px; top: 20%; bottom: 20%; width: 2px; border-radius: 2px;
+      background: var(--accent); box-shadow: 0 0 10px var(--accent); animation: bar-in .35s var(--ease);
+    }
+    #toc .kids { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows .45s var(--ease), opacity .35s; }
+    #toc .kids > ul { overflow: hidden; min-height: 0; margin-left: 6px; border-left: 1px solid var(--line); padding-left: 6px; }
+    #toc li.open > .kids { grid-template-rows: 1fr; opacity: 1; }
+    #toc li.flat > .kids { grid-template-rows: 1fr; opacity: 1; }
+    .markdown-section h2, .markdown-section h3, .export-card { scroll-margin-top: 26px; }
+
     /* scroll reveal */
     .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
     .reveal.in { opacity: 1; transform: none; }
@@ -330,7 +364,7 @@
       name: 'ROTD Wiki',
       homepage: 'Home.md',
       loadSidebar: '_docsify_sidebar.md',
-      subMaxLevel: 2,
+      subMaxLevel: 0,
       auto2top: true,
       relativePath: false,
       search: { placeholder: 'Search the wiki...', noData: 'Nothing found.', depth: 3 },
@@ -380,9 +414,66 @@
             if (m) { var h = document.getElementById(decodeURIComponent(m[1])); var c = h && h.closest('.export-card'); if (c) { c.classList.add('flash'); } }
           }
 
+          // right-hand table of contents with scroll-spy
+          var tocItems = [];
+          function buildToc() {
+            var old = document.getElementById('toc'); if (old) old.remove();
+            tocItems = [];
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var heads = root.querySelectorAll(':scope > h2, :scope > h3, .export-card > h4');
+            if (heads.length < 2) return;
+            var nav = document.createElement('nav'); nav.id = 'toc';
+            nav.innerHTML = '<div class="toc-title">On this page</div><ul></ul>';
+            var top = nav.querySelector('ul'), group = null, kids = null;
+            function link(el, cls, label) {
+              var a = document.createElement('a'); a.className = cls; a.textContent = label; a.href = '#';
+              var target = el.closest('.export-card') || el;
+              a.addEventListener('click', function (e) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+              return a;
+            }
+            heads.forEach(function (h) {
+              var tag = h.tagName, label;
+              if (tag === 'H4') { var fn = h.querySelector('.fn'); label = fn ? fn.textContent : h.textContent.trim(); }
+              else label = h.textContent.replace(/^\s*\/\s*/, '').trim();
+              if (tag === 'H2' || !group) {
+                var li = document.createElement('li'); group = li;
+                var a = link(h, tag === 'H2' ? 't2' : 't3', label); li.appendChild(a);
+                var wrap = document.createElement('div'); wrap.className = 'kids'; kids = document.createElement('ul'); wrap.appendChild(kids); li.appendChild(wrap);
+                top.appendChild(li); tocItems.push({ el: h, a: a, li: li });
+                if (tag !== 'H2') li.classList.add('flat');
+              } else {
+                var kli = document.createElement('li');
+                var ka = link(h, tag === 'H3' ? 't3' : 't4', label); kli.appendChild(ka); kids.appendChild(kli);
+                tocItems.push({ el: h, a: ka, li: group });
+              }
+            });
+            document.body.appendChild(nav);
+            updateToc();
+          }
+          function updateToc() {
+            if (!tocItems.length) return;
+            var active = tocItems[0];
+            for (var i = 0; i < tocItems.length; i++) {
+              var el = tocItems[i].el, r = (el.closest('.export-card') || el).getBoundingClientRect();
+              if (r.top <= 150) active = tocItems[i]; else break;
+            }
+            tocItems.forEach(function (t) { t.a.classList.toggle('on', t === active); t.li.classList.toggle('open', t.li === active.li); });
+            var nav = document.getElementById('toc');
+            if (nav && active.a.getBoundingClientRect) {
+              var nr = nav.getBoundingClientRect(), ar = active.a.getBoundingClientRect();
+              if (ar.top < nr.top + 30 || ar.bottom > nr.bottom - 30) nav.scrollTop += ar.top - nr.top - nr.height / 2;
+            }
+          }
+          var tocTick = false;
+          window.addEventListener('scroll', function () {
+            if (tocTick) return; tocTick = true;
+            requestAnimationFrame(function () { tocTick = false; updateToc(); });
+          }, { passive: true });
+
           var io;
           hook.doneEach(function () {
             buildCards();
+            buildToc();
             // scroll reveal for heavy blocks
             if (io) io.disconnect();
             io = new IntersectionObserver(function (entries) {
