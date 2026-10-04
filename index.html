@@ -1,0 +1,86 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ROTD Developer Wiki</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0">
+  <meta name="description" content="Exports, events and APIs of the ROTD resources, with examples.">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+  <style>
+    :root {
+      --accent: #e5483c;
+      --accent-soft: rgba(229, 72, 60, .14);
+      --bg: #0f1115;
+      --panel: #161a21;
+      --line: #262c36;
+      --text: #d7dbe2;
+      --muted: #8a93a3;
+    }
+    body { background: var(--bg); color: var(--text); font-family: Inter, "Segoe UI", system-ui, sans-serif; }
+    .sidebar { background: var(--panel); border-right: 1px solid var(--line); }
+    .sidebar .app-name { padding: 18px 0 4px; }
+    .sidebar .app-name-link { color: #fff; font-weight: 700; letter-spacing: .5px; }
+    .sidebar ul li a { color: var(--muted); font-size: 14px; border-radius: 6px; padding: 5px 10px; margin: 1px 12px; display: block; }
+    .sidebar ul li a:hover { color: #fff; background: rgba(255,255,255,.04); text-decoration: none; }
+    .sidebar ul li.active > a { color: #fff; background: var(--accent-soft); border-right: 0; border-left: 3px solid var(--accent); font-weight: 600; }
+    .sidebar ul li strong { display: block; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: 1.2px; margin: 18px 22px 4px; opacity: .55; }
+    .sidebar-toggle { background: transparent; }
+    .search { border-bottom: 1px solid var(--line); }
+    .search input { background: var(--bg) !important; color: var(--text); border: 1px solid var(--line) !important; border-radius: 6px; }
+    .markdown-section { max-width: 920px; }
+    .markdown-section h1 { color: #fff; border-bottom: 2px solid var(--accent); padding-bottom: 10px; }
+    .markdown-section h2 { color: #fff; border-bottom: 1px solid var(--line); padding-bottom: 6px; margin-top: 2.2em; }
+    .markdown-section h3 { color: #fff; }
+    .markdown-section a { color: #ff7a6e; }
+    .markdown-section table { display: table; width: 100%; border-collapse: collapse; }
+    .markdown-section th { background: var(--panel); color: #fff; text-align: left; }
+    .markdown-section th, .markdown-section td { border: 1px solid var(--line); padding: 8px 12px; }
+    .markdown-section tr:nth-child(2n) { background: rgba(255,255,255,.02); }
+    .markdown-section code { background: rgba(255,255,255,.07); color: #ffb4ab; border-radius: 4px; }
+    .markdown-section pre { background: #0b0d11 !important; border: 1px solid var(--line); border-radius: 8px; }
+    .markdown-section pre > code { background: transparent; color: var(--text); }
+    .markdown-section blockquote { background: var(--accent-soft); border-left: 4px solid var(--accent); color: var(--text); border-radius: 0 6px 6px 0; padding: 10px 16px; }
+    .docsify-copy-code-button { background: var(--line) !important; color: #fff !important; border-radius: 4px !important; }
+    .pagination-item-title { color: #ff7a6e; }
+    .content { padding-top: 20px; }
+  </style>
+</head>
+<body>
+  <div id="app">Loading...</div>
+  <script>
+    window.$docsify = {
+      name: 'ROTD Wiki',
+      repo: 'LySoon/rotd_tebexwiki',
+      homepage: 'Home.md',
+      loadSidebar: '_docsify_sidebar.md',
+      subMaxLevel: 2,
+      auto2top: true,
+      relativePath: false,
+      search: {
+        placeholder: 'Search the wiki...',
+        noData: 'No results.',
+        depth: 3
+      },
+      copyCode: { buttonText: 'Copy', errorText: 'Error', successText: 'Copied' },
+      pagination: { previousText: 'Previous', nextText: 'Next' },
+      plugins: [
+        // Keep the GitHub-wiki [[Page-Name]] syntax working so the same .md files serve both.
+        function (hook) {
+          hook.beforeEach(function (md) {
+            return md
+              .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '[$1]($2)')
+              .replace(/\[\[([^\]]+)\]\]/g, '[$1]($1)');
+          });
+        }
+      ]
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-lua.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+</body>
+</html>
