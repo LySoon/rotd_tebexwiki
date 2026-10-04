@@ -269,6 +269,17 @@
     .export-card p.returns > strong:first-child {
       flex: none; font: 600 10.5px/1 "Space Grotesk", sans-serif; letter-spacing: 1.3px; text-transform: uppercase; color: var(--accent);
     }
+    .export-card p.returns .rbody { flex: 1; min-width: 0; line-height: 1.7; }
+    .copy-name {
+      margin-left: auto; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+      font: 500 11px "Space Grotesk", sans-serif; letter-spacing: .4px; color: var(--muted);
+      background: transparent; border: 1px solid var(--line-strong); border-radius: 8px; padding: 5px 10px;
+      opacity: .55; transition: opacity .25s, color .25s, border-color .25s, background .25s, transform .3s var(--ease);
+    }
+    .export-card:hover .copy-name, .copy-name:focus-visible { opacity: 1; }
+    .copy-name:hover { color: var(--accent); border-color: rgba(184,255,61,.5); transform: translateY(-1px); }
+    .copy-name.done { color: var(--bg); background: var(--accent); border-color: var(--accent); opacity: 1; }
+    @media (hover: none) { .copy-name { opacity: 1; } }
     .export-card blockquote { margin: 12px 0; border-left-color: #ffb454; background: linear-gradient(90deg, rgba(255,180,84,.09), transparent); }
     .export-card details { margin-top: 14px; }
     .export-card summary {
@@ -410,10 +421,26 @@
                 code.firstChild.textContent = txt.slice(0, k);
                 code.lastChild.textContent = txt.slice(k);
                 if (side) { var b = document.createElement('span'); b.className = 'badge ' + side; b.textContent = side; el.insertBefore(b, el.firstChild); }
+                var fname = txt.slice(0, k).trim();
+                var cb = document.createElement('button');
+                cb.type = 'button'; cb.className = 'copy-name'; cb.title = 'Copy export name'; cb.setAttribute('aria-label', 'Copy ' + fname);
+                cb.innerHTML = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H11"/></svg><span>Copy</span>';
+                cb.addEventListener('click', function (e) {
+                  e.preventDefault(); e.stopPropagation();
+                  var done = function () { cb.classList.add('done'); cb.lastChild.textContent = 'Copied'; setTimeout(function () { cb.classList.remove('done'); cb.lastChild.textContent = 'Copy'; }, 1300); };
+                  var legacy = function () { var ta = document.createElement('textarea'); ta.value = fname; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (x) {} ta.remove(); };
+                  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(fname).then(done, legacy); else legacy();
+                });
+                el.appendChild(cb);
               }
               card.querySelectorAll(':scope > p').forEach(function (p) {
                 var f = p.firstElementChild;
-                if (f && f.tagName === 'STRONG' && /^Returns/.test(f.textContent)) p.classList.add('returns');
+                if (f && f.tagName === 'STRONG' && /^Returns/.test(f.textContent)) {
+                  p.classList.add('returns');
+                  var body = document.createElement('div'); body.className = 'rbody';
+                  while (f.nextSibling) body.appendChild(f.nextSibling);
+                  p.appendChild(body);
+                }
               });
             });
             // flash the card that matches a deep link
