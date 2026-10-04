@@ -198,6 +198,10 @@
       background: radial-gradient(circle at 18px 15px, #ff5f57 4px, transparent 5px), radial-gradient(circle at 36px 15px, #febc2e 4px, transparent 5px), radial-gradient(circle at 54px 15px, #28c840 4px, transparent 5px), rgba(255,255,255,.025);
     }
     .markdown-section pre > code { display: block; background: transparent; border: 0; padding: 18px 22px; color: var(--text); font-size: 13.5px; line-height: 1.7; overflow-x: auto; }
+    .markdown-section pre[data-lang]::after {
+      content: attr(data-lang); position: absolute; left: 74px; right: auto; top: 8px; z-index: 1;
+      font: 500 11px "JetBrains Mono", monospace; letter-spacing: .6px; text-transform: lowercase; color: var(--muted); opacity: .85;
+    }
     .token.comment { color: #5b6573; } .token.string { color: #b8ff3d; } .token.keyword { color: #ff7a6e; }
     .token.function { color: #7dd3fc; } .token.number, .token.boolean { color: #ffcf6e; } .token.punctuation, .token.operator { color: #94a0ae; }
     .docsify-copy-code-button {
