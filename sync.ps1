@@ -15,6 +15,11 @@ New-Item -ItemType Directory $work | Out-Null
 foreach ($r in $repos) {
   $dir = Join-Path $work $r.Name
   git clone -q $r.Url $dir
+  # use your own git identity if set, otherwise a repo-local fallback so the commit never fails
+  if (-not (git -C $dir config user.email)) {
+    git -C $dir config user.name "LySoon"
+    git -C $dir config user.email "emirmutlu20@windowslive.com"
+  }
   Copy-Item "$src\*.md" $dir -Force
   if ($r.Name -eq 'site') {
     (Get-Content "$src\_Sidebar.md" -Raw) -replace '\[\[([^\]]+)\]\]','[$1]($1)' | Set-Content "$dir\_docsify_sidebar.md" -Encoding utf8
@@ -22,7 +27,9 @@ foreach ($r in $repos) {
   git -C $dir add -A
   if (git -C $dir status --porcelain) {
     git -C $dir commit -q -m $Message
+    if ($LASTEXITCODE -ne 0) { Write-Host "$($r.Name): commit FAILED"; continue }
     git -C $dir push -q origin HEAD
+    if ($LASTEXITCODE -ne 0) { Write-Host "$($r.Name): push FAILED"; continue }
     Write-Host "$($r.Name): pushed"
   } else {
     Write-Host "$($r.Name): no changes"
