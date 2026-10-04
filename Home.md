@@ -30,14 +30,14 @@ If you write or fix your FiveM server with an AI (Claude, ChatGPT, Cursor, Copil
 
 | File | Use it for |
 |---|---|
-| https://lysoon.github.io/rotd_tebexwiki/llms-full.txt | the **whole wiki in one file**. Best choice, hand this one to your AI |
-| https://lysoon.github.io/rotd_tebexwiki/llms.txt | a short index of every page |
-| https://lysoon.github.io/rotd_tebexwiki/Export-Index.md | every export, A to Z, with its side and a one-line description |
+| https://imkamii.github.io/rotd_tebexwiki/llms-full.txt | the **whole wiki in one file**. Best choice, hand this one to your AI |
+| https://imkamii.github.io/rotd_tebexwiki/llms.txt | a short index of every page |
+| https://imkamii.github.io/rotd_tebexwiki/Export-Index.md | every export, A to Z, with its side and a one-line description |
 
 Paste this to your AI before you ask for code:
 
 ```text
-Read https://lysoon.github.io/rotd_tebexwiki/llms-full.txt first.
+Read https://imkamii.github.io/rotd_tebexwiki/llms-full.txt first.
 It is the API documentation of the ROTD FiveM resource pack.
 Only use exports that are listed there and never invent one.
 Respect the SERVER / CLIENT / SHARED side of every export.

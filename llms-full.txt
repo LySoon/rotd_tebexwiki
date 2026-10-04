@@ -9,7 +9,7 @@ Rules for writing code against these docs:
 - Exports marked "authorised" only work from resources listed in the trusted resources config.
 
 
-<!-- page: Changelog | https://lysoon.github.io/rotd_tebexwiki/#/Changelog -->
+<!-- page: Changelog | https://imkamii.github.io/rotd_tebexwiki/#/Changelog -->
 # Changelog
 
 What changed in the exports and in these docs. Newest first. Add a line here whenever an export is added, renamed, changed or removed, so developers can see it.
@@ -40,7 +40,7 @@ What changed in the exports and in these docs. Newest first. Add a line here whe
 - Removed `ExportName`: use `OtherExport` instead.
 ```
 
-<!-- page: Common-Mistakes | https://lysoon.github.io/rotd_tebexwiki/#/Common-Mistakes -->
+<!-- page: Common-Mistakes | https://imkamii.github.io/rotd_tebexwiki/#/Common-Mistakes -->
 # Common mistakes
 
 The errors that come up most when calling ROTD exports. Each one shows the wrong way, the right way and why.
@@ -194,7 +194,7 @@ ensure rotd_bridge
 ensure rotd_zones
 ```
 
-<!-- page: Getting-Started | https://lysoon.github.io/rotd_tebexwiki/#/Getting-Started -->
+<!-- page: Getting-Started | https://imkamii.github.io/rotd_tebexwiki/#/Getting-Started -->
 # Getting started
 
 How exports, client and server sides, player identifiers and registration hooks work in the ROTD pack. Read this once, every other page builds on it.
@@ -278,7 +278,7 @@ RegisterNetEvent('mybandage:client:use', function()
 end)
 ```
 
-<!-- page: Home | https://lysoon.github.io/rotd_tebexwiki/#/Home -->
+<!-- page: Home | https://imkamii.github.io/rotd_tebexwiki/#/Home -->
 # ROTD Developer Wiki
 
 Documentation for the exports, events and APIs of the ROTD resources, with examples.
@@ -311,14 +311,14 @@ If you write or fix your FiveM server with an AI (Claude, ChatGPT, Cursor, Copil
 
 | File | Use it for |
 |---|---|
-| https://lysoon.github.io/rotd_tebexwiki/llms-full.txt | the **whole wiki in one file**. Best choice, hand this one to your AI |
-| https://lysoon.github.io/rotd_tebexwiki/llms.txt | a short index of every page |
-| https://lysoon.github.io/rotd_tebexwiki/Export-Index.md | every export, A to Z, with its side and a one-line description |
+| https://imkamii.github.io/rotd_tebexwiki/llms-full.txt | the **whole wiki in one file**. Best choice, hand this one to your AI |
+| https://imkamii.github.io/rotd_tebexwiki/llms.txt | a short index of every page |
+| https://imkamii.github.io/rotd_tebexwiki/Export-Index.md | every export, A to Z, with its side and a one-line description |
 
 Paste this to your AI before you ask for code:
 
 ```text
-Read https://lysoon.github.io/rotd_tebexwiki/llms-full.txt first.
+Read https://imkamii.github.io/rotd_tebexwiki/llms-full.txt first.
 It is the API documentation of the ROTD FiveM resource pack.
 Only use exports that are listed there and never invent one.
 Respect the SERVER / CLIENT / SHARED side of every export.
@@ -329,7 +329,7 @@ If something you need is not documented, say so instead of guessing.
 
 Every page of the website also has these links in its footer.
 
-<!-- page: npc_guide | https://lysoon.github.io/rotd_tebexwiki/#/npc_guide -->
+<!-- page: npc_guide | https://imkamii.github.io/rotd_tebexwiki/#/npc_guide -->
 # npc_guide
 
 Quest NPCs, quest progress, and the currency exchange market.
@@ -813,7 +813,7 @@ for _, c in ipairs(candles) do print(c.bucket, c.open, c.high, c.low, c.close) e
 exports.npc_guide:TrackMinigame('lockpick', 4)
 ```
 
-<!-- page: rotd_blips | https://lysoon.github.io/rotd_tebexwiki/#/rotd_blips -->
+<!-- page: rotd_blips | https://imkamii.github.io/rotd_tebexwiki/#/rotd_blips -->
 # rotd_blips
 
 Discoverable map blips and POIs. Its exports give **positions where building should be blocked**; `rotd_zones` uses them for its no-build gate. Called from the **client** (the config is shared, so server use also works).
@@ -909,7 +909,7 @@ local ok, reason, distance = exports.rotd_zones:CanBuildAtCoords(coords)
 if not ok then print(exports.rotd_zones:GetNoBuildMessage(reason), distance) end
 ```
 
-<!-- page: rotd_bridge | https://lysoon.github.io/rotd_tebexwiki/#/rotd_bridge -->
+<!-- page: rotd_bridge | https://imkamii.github.io/rotd_tebexwiki/#/rotd_bridge -->
 # rotd_bridge
 
 The shared layer between ROTD resources and your framework, inventory and optional partner resources. A resource never calls `QBCore`, `ox_inventory` and so on directly: it asks the bridge.
@@ -1470,7 +1470,7 @@ end)
 Bridge.Framework.OnPlayerUnloaded(function() print('character left') end)
 ```
 
-<!-- page: rotd_classystem | https://lysoon.github.io/rotd_tebexwiki/#/rotd_classystem -->
+<!-- page: rotd_classystem | https://imkamii.github.io/rotd_tebexwiki/#/rotd_classystem -->
 # rotd_classystem
 
 Classes, skills, XP and modifiers. Modifiers are multipliers (`1.0` = normal) such as `meleeDamage`. Skills carry **effects** with numeric or boolean values.
@@ -2231,7 +2231,7 @@ AddEventHandler('rotd_classystem:server:skillActivated', function(src, skillId, 
 end)
 ```
 
-<!-- page: rotd_leaderboard | https://lysoon.github.io/rotd_tebexwiki/#/rotd_leaderboard -->
+<!-- page: rotd_leaderboard | https://imkamii.github.io/rotd_tebexwiki/#/rotd_leaderboard -->
 # rotd_leaderboard
 
 Read-only stat lookups from the `player_stats` table. All exports are **server side** and take a **cid** (character id, `string`). Unknown players return `0`.
@@ -2358,7 +2358,7 @@ local function hasVeteranTitle(cid)
 end
 ```
 
-<!-- page: rotd_loots | https://lysoon.github.io/rotd_tebexwiki/#/rotd_loots -->
+<!-- page: rotd_loots | https://imkamii.github.io/rotd_tebexwiki/#/rotd_loots -->
 # rotd_loots
 
 Searchable loot props and containers, plus the "loot sense" scan.
@@ -2477,7 +2477,7 @@ local props = exports.rotd_loots:GetAllLootProps()
 print(('%d lootable props'):format(#props))
 ```
 
-<!-- page: rotd_recyclers | https://lysoon.github.io/rotd_tebexwiki/#/rotd_recyclers -->
+<!-- page: rotd_recyclers | https://imkamii.github.io/rotd_tebexwiki/#/rotd_recyclers -->
 # rotd_recyclers
 
 Scrapping stations. The only exports are notification helpers (**client side**).
@@ -2548,7 +2548,7 @@ exports.rotd_recyclers:ShowNotification('Recycler', 'Out of fuel', 'error')     
 exports.rotd_recyclers:ClearNotifications()
 ```
 
-<!-- page: rotd_scavs | https://lysoon.github.io/rotd_tebexwiki/#/rotd_scavs -->
+<!-- page: rotd_scavs | https://imkamii.github.io/rotd_tebexwiki/#/rotd_scavs -->
 # rotd_scavs
 
 AI scavenger squads that loot corpses and stashes. Two **server** exports let other systems change what a scav carries. A scav is identified by its **network id** (`netId`, `number`).
@@ -2622,7 +2622,7 @@ else
 end
 ```
 
-<!-- page: rotd_squad | https://lysoon.github.io/rotd_tebexwiki/#/rotd_squad -->
+<!-- page: rotd_squad | https://imkamii.github.io/rotd_tebexwiki/#/rotd_squad -->
 # rotd_squad
 
 Squads, reputation, per-player stats and squad building access.
@@ -3328,7 +3328,7 @@ if stats then
 end
 ```
 
-<!-- page: rotd_zones | https://lysoon.github.io/rotd_tebexwiki/#/rotd_zones -->
+<!-- page: rotd_zones | https://imkamii.github.io/rotd_tebexwiki/#/rotd_zones -->
 # rotd_zones
 
 Zones, radiation, resistance, infection hooks and zombie names. Call exports with `exports.rotd_zones:Name(...)` (or `exports['rotd_zones']:Name(...)`).
@@ -4304,7 +4304,7 @@ if exports.rotd_zones:IsNightTime() then
 end
 ```
 
-<!-- page: rotd-minigame | https://lysoon.github.io/rotd_tebexwiki/#/rotd-minigame -->
+<!-- page: rotd-minigame | https://imkamii.github.io/rotd_tebexwiki/#/rotd-minigame -->
 # rotd-minigame
 
 Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire splice and more. **Client side only.**
@@ -4419,7 +4419,7 @@ exports['rotd-minigame']:startMinigame('syringe', 3, 20, function(success, reaso
 end)
 ```
 
-<!-- page: Small-Exports | https://lysoon.github.io/rotd_tebexwiki/#/Small-Exports -->
+<!-- page: Small-Exports | https://imkamii.github.io/rotd_tebexwiki/#/Small-Exports -->
 # Small exports
 
 Tiny exports of two resources, `rotd_events` and `rotd_mystery_merchant`. Both list the vehicles they currently own, so cleanup scripts such as `vehicle_spawner` leave those vehicles alone.
@@ -4462,7 +4462,7 @@ end
 ```
 
 
-<!-- page: vehicle_spawner | https://lysoon.github.io/rotd_tebexwiki/#/vehicle_spawner -->
+<!-- page: vehicle_spawner | https://imkamii.github.io/rotd_tebexwiki/#/vehicle_spawner -->
 # vehicle_spawner
 
 World vehicles, damage and parts. Exports for event scripts, garages and zombie systems.
