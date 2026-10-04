@@ -718,7 +718,65 @@
       body.close .sidebar { transform: none !important; box-shadow: 0 0 60px rgba(0, 0, 0, .55); }
       body.close .content { transform: none !important; }
       .content { left: 0 !important; padding-top: 0 !important; }
-    }    @media (prefers-reduced-motion: reduce) {
+    }    /* ================= motion & glow (only with a real mouse / no reduce-motion) ================= */
+    #read-progress { transition: width .35s var(--ease); }
+    .content::before { transform: translateY(calc(var(--sy, 0px) * -.1)); }
+    .markdown-section > h2 { position: relative; }
+    .markdown-section > h2::after {
+      content: ""; position: absolute; left: 0; bottom: -1px; height: 2px; width: 0; border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent), transparent); transition: width 1s .15s var(--ease);
+    }
+    .markdown-section > h2.in::after { width: 140px; }
+
+    /* cursor glow: sits behind everything */
+    #cursor-glow {
+      position: fixed; left: 0; top: 0; width: 320px; height: 320px; border-radius: 50%; pointer-events: none; z-index: -1; opacity: 0; will-change: transform;
+      background: radial-gradient(circle, rgba(var(--ac), .17) 0%, rgba(var(--ac), .06) 38%, transparent 68%); transition: opacity .6s;
+    }
+    #cursor-glow.on { opacity: 1; }
+    :root[data-theme="light"] #cursor-glow { background: radial-gradient(circle, rgba(var(--ac), .22) 0%, rgba(var(--ac), .07) 38%, transparent 68%); }
+
+    /* resource cards on Home: tilt toward the mouse */
+    .fx-on .res-card {
+      transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--ty, 0px));
+      transition: transform .25s ease-out, border-color .3s, box-shadow .4s;
+    }
+    .fx-on .res-card:hover { --ty: -5px; transform: perspective(800px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--ty)); }
+
+    /* magnetic buttons ease back when the mouse leaves */
+    .ta-store, .ta-btn, .btn.primary { transition: transform .35s var(--ease), box-shadow .3s, color .25s, border-color .25s, background .25s; }
+
+    /* click ripple + copy burst */
+    .btn, .ta-btn, .ta-store, .tb-btn, .chip, .copy-name { position: relative; overflow: hidden; }
+    .ripple { position: absolute; border-radius: 50%; pointer-events: none; background: rgba(var(--ac), .38); transform: scale(0); animation: ripple .65s ease-out forwards; }
+    .btn.primary .ripple, .ta-store .ripple, .chip.on .ripple { background: rgba(0, 0, 0, .22); }
+    @keyframes ripple { to { transform: scale(1); opacity: 0; } }
+
+    /* sidebar: one glowing marker that slides to the active page */
+    .nav-pill {
+      position: absolute; left: 12px; width: 3px; border-radius: 3px; pointer-events: none; z-index: 2; background: var(--accent); box-shadow: 0 0 12px var(--accent);
+      transition: top .5s var(--ease), height .5s var(--ease), opacity .3s; opacity: 0;
+    }
+    .nav-pill.on { opacity: 1; }
+    .sidebar ul li.active > a::before { display: none; }
+
+    /* home hero */
+    @keyframes heroIn { from { opacity: 0; transform: translateY(22px) scale(.985); filter: blur(10px); } }
+    .markdown-section > h1.hero-in { animation: heroIn 1s var(--ease) both !important; }
+    .markdown-section > .eyebrow { animation: rise .7s var(--ease) both; }
+    .hero-cta { animation: rise .8s .25s var(--ease) both; }
+    .hero-stats { animation: rise .8s .4s var(--ease) both; }
+    .hero-stats b { font-variant-numeric: tabular-nums; }
+    /* the only glow on the page is the cursor glow in the background */
+    .export-card:hover, .res-card:hover, .markdown-section pre:hover, .ta-store:hover, .btn:hover, .btn.primary:hover,
+    .page-foot .store-link:hover, .pagination-item a:hover, .find-export:hover, .toolbar { box-shadow: none !important; }
+    /* the cursor glow lives only on the open page background: every card, panel and bar sits solid on top of it */
+    .sidebar, .mobile-bar, .toolbar, #palette .pal-box { background-color: var(--panel-solid) !important; background-image: none !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+    .export-card, .res-card, .markdown-section table, .markdown-section blockquote.callout, .markdown-section blockquote,
+    .pagination-item a, .btn, .tb-btn, .chip, .ta-btn { background-color: var(--bg); }
+    .markdown-section code { background-color: color-mix(in srgb, var(--head) 8%, var(--bg)); }
+    .markdown-section pre { background-color: var(--code-bg) !important; }
+    @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
       .reveal { opacity: 1; transform: none; }
     }
@@ -957,7 +1015,7 @@
             });
             var st = root.querySelector('.hero-stats'), pages = Object.keys(homeCounts).length, total = 0;
             Object.keys(homeCounts).forEach(function (k) { total += homeCounts[k]; });
-            if (st && total) st.innerHTML = '<span><b>' + pages + '</b>resources</span><span><b>' + total + '</b>exports</span><span><b>3</b>sides: server, client, shared</span>';
+            if (st && total && !st.dataset.done) { st.dataset.done = '1'; st.innerHTML = '<span><b>0</b>resources</span><span><b>0</b>exports</span><span><b>3</b>sides: server, client, shared</span>'; var nb = st.querySelectorAll('b'); countUp(nb[0], pages, 900); countUp(nb[1], total, 1300); }
           }
           function sidebarCounts() {
             document.querySelectorAll('.sidebar-nav a').forEach(function (a) {
@@ -1271,6 +1329,77 @@
             var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#f5f6f2' : '#0a0c0f';
           }
 
+          // ================= motion & glow =================
+          var FX = { fine: matchMedia('(hover: hover) and (pointer: fine)').matches, reduce: matchMedia('(prefers-reduced-motion: reduce)').matches };
+          var SPOT = '.export-card, .res-card, .toolbar, .btn, .ta-store, .ta-btn, .tb-btn, .chip';
+          var MAG = '.ta-store, .ta-btn, .btn.primary';
+          function ripple(e) {
+            var el = e.target.closest && e.target.closest('.btn, .ta-btn, .ta-store, .tb-btn, .chip, .copy-name'); if (!el) return;
+            var r = el.getBoundingClientRect(), s = Math.max(r.width, r.height) * 2.2, d = document.createElement('span');
+            d.className = 'ripple'; d.style.width = d.style.height = s + 'px'; d.style.left = (e.clientX - r.left - s / 2) + 'px'; d.style.top = (e.clientY - r.top - s / 2) + 'px';
+            el.appendChild(d); d.addEventListener('animationend', function () { d.remove(); });
+          }
+          function spot(e) {
+            var el = e.target.closest && e.target.closest(SPOT); if (!el) return;
+            var r = el.getBoundingClientRect(), px = (e.clientX - r.left) / r.width - .5, py = (e.clientY - r.top) / r.height - .5;
+            el.style.setProperty('--mx', (e.clientX - r.left) + 'px'); el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+            if (el.classList.contains('res-card')) { el.style.setProperty('--ry', (px * 9) + 'deg'); el.style.setProperty('--rx', (-py * 9) + 'deg'); }
+            if (el.matches(MAG)) el.style.transform = 'translate(' + (px * r.width * .28) + 'px,' + (py * r.height * .28) + 'px)';
+          }
+          function fxInit() {
+            if (FX.reduce) return;
+            document.addEventListener('pointerdown', ripple, { passive: true });
+            var tick = false;
+            window.addEventListener('scroll', function () {
+              if (tick) return; tick = true;
+              requestAnimationFrame(function () { tick = false; document.documentElement.style.setProperty('--sy', window.scrollY + 'px'); });
+            }, { passive: true });
+            if (!FX.fine) return;
+            document.body.classList.add('fx-on');
+            var g = document.createElement('div'); g.id = 'cursor-glow'; document.body.appendChild(g);
+            var tx = 0, ty = 0, x = 0, y = 0, seen = false, raf = 0;
+            function loop() {
+              x += (tx - x) * .15; y += (ty - y) * .15;
+              g.style.transform = 'translate3d(' + (x - 160) + 'px,' + (y - 160) + 'px,0)';
+              raf = (Math.abs(tx - x) > .4 || Math.abs(ty - y) > .4) ? requestAnimationFrame(loop) : 0;
+            }
+            document.addEventListener('pointermove', function (e) {
+              if (e.pointerType === 'touch') return;
+              tx = e.clientX; ty = e.clientY;
+              if (!seen) { seen = true; x = tx; y = ty; g.classList.add('on'); }
+              if (!raf) raf = requestAnimationFrame(loop);
+              spot(e);
+            }, { passive: true });
+            document.addEventListener('pointerout', function (e) {
+              if (!e.relatedTarget) g.classList.remove('on'); else if (seen) g.classList.add('on');
+              var el = e.target.closest && e.target.closest(SPOT);
+              if (!el || (e.relatedTarget && el.contains(e.relatedTarget))) return;
+              el.style.removeProperty('--rx'); el.style.removeProperty('--ry');
+              if (el.matches(MAG)) el.style.transform = '';
+            });
+            document.addEventListener('visibilitychange', function () { if (document.hidden) g.classList.remove('on'); });
+          }
+          function countUp(el, to, ms) {
+            if (FX.reduce) { el.textContent = to; return; }
+            var t0 = performance.now();
+            (function step(now) {
+              var p = Math.min(1, (now - t0) / ms), e = 1 - Math.pow(1 - p, 3);
+              el.textContent = Math.round(to * e); if (p < 1) requestAnimationFrame(step);
+            })(t0);
+          }
+          function fxNav() {
+            var sb = document.querySelector('.sidebar'); if (!sb) return;
+            var pill = sb.querySelector('.nav-pill');
+            if (!pill) { pill = document.createElement('div'); pill.className = 'nav-pill'; sb.appendChild(pill); }
+            var a = sb.querySelector('.sidebar-nav li.active > a'); if (!a) { pill.classList.remove('on'); return; }
+            var ar = a.getBoundingClientRect(), sr = sb.getBoundingClientRect();
+            pill.style.top = (ar.top - sr.top + sb.scrollTop + ar.height * .22) + 'px'; pill.style.height = (ar.height * .56) + 'px'; pill.classList.add('on');
+          }
+          function fxPage() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            if (isHome()) { var h = root.querySelector('h1'); if (h) h.classList.add('hero-in'); }
+            fxNav(); setTimeout(fxNav, 450);
+          }
           var io;
           hook.doneEach(function () {
             buildCards();
@@ -1284,6 +1413,7 @@
             buildHome();
             sidebarCounts(); ensureCounts();
             pageFooter();
+            fxPage();
             if (pendingGoto) {
               var pg = pendingGoto; pendingGoto = null;
               // the router scrolls to the top after rendering, so scroll again until the card is really in view
@@ -1305,6 +1435,7 @@
           });
 
           hook.mounted(function () {
+            fxInit();
             // top bar: menu | title ........ [search] [Discord] [Tebex] [light/dark]
             var DISCORD_URL = '';   // <-- paste your Discord invite here, e.g. 'https://discord.gg/yourcode' (empty = button shown, no link yet)
             var TEBEX_URL = 'https://rogue-of-the-dead-rp.tebex.io/';
