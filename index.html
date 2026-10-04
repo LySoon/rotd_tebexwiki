@@ -415,8 +415,11 @@
     .markdown-section a.ref { border: 0; display: inline-block; }
     .markdown-section a.ref code { cursor: pointer; transition: background .2s, color .2s, border-color .2s, transform .25s var(--ease); }
     .markdown-section a.ref:hover code { background: rgba(var(--ac), .2); border-color: rgba(var(--ac), .55); transform: translateX(2px); }
-    .markdown-section a.ref code::after { content: " \2193"; opacity: 0; transition: opacity .2s; }
-    .markdown-section a.ref:hover code::after { opacity: .8; }
+    /* the little arrow is hover-only; on touch screens it wrapped onto its own line as an empty box */
+    @media (hover: hover) and (min-width: 641px) {
+      .markdown-section a.ref code::after { content: "\00a0\2193"; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+      .markdown-section a.ref:hover code::after { opacity: .8; }
+    }
 
     /* ---------- pills ---------- */
     .pill {
@@ -644,12 +647,37 @@
     ::selection { background: rgba(var(--ac),.3); color: #fff; }
     ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; }
 
+    .mobile-bar { display: none; }
     @media (max-width: 768px) {
-      .markdown-section { padding: 64px 18px 80px; }
-      .theme-wrap { top: 12px; right: 14px; }
-      .markdown-section h1 { font-size: 2rem; }
-      body.close .sidebar { transform: translateX(var(--sidebar-w)); }
-      .content { left: 0; }
+      /* top bar: menu | title | search | theme */
+      .mobile-bar {
+        display: flex; align-items: center; position: fixed; top: 0; left: 0; right: 0; height: 52px; z-index: 55; padding: 0 0 0 58px;
+        background: var(--panel); border-bottom: 1px solid var(--line);
+        backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+      }
+      .mb-title { font: 700 15px "Space Grotesk", sans-serif; letter-spacing: -.2px; color: var(--head); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+      .mb-title::before { content: ""; width: 9px; height: 9px; border-radius: 3px; background: var(--accent); box-shadow: 0 0 10px rgba(var(--ac), .7); }
+      .mb-search {
+        position: absolute; right: 56px; top: 9px; width: 34px; height: 34px; display: grid; place-items: center; cursor: pointer;
+        color: var(--text-2); background: transparent; border: 1px solid var(--line-strong); border-radius: 50%;
+      }
+      .sidebar-toggle {
+        position: fixed !important; top: 0 !important; bottom: auto !important; left: 0 !important; width: 52px !important; height: 52px !important;
+        padding: 0 !important; z-index: 70 !important; display: flex !important; flex-direction: column; align-items: center; justify-content: center; background: transparent !important;
+      }
+      .sidebar-toggle span { margin: 2px 0 !important; width: 18px !important; }
+      .theme-wrap { top: 9px; right: 12px; z-index: 70; }
+      .theme-toggle { width: 34px; height: 34px; padding: 0; justify-content: center; }
+      .theme-label { display: none; }
+      .markdown-section { padding: 72px 18px 80px; }
+      .markdown-section h1 { font-size: 2rem; background: none; -webkit-text-fill-color: var(--head); color: var(--head); }
+      .toolbar { top: 62px; }
+      /* menu: slides over the page instead of pushing it, and is never cut off */
+      .sidebar { left: 0 !important; width: min(var(--sidebar-w), 86vw) !important; transform: translateX(-105%); z-index: 90; box-shadow: none; padding-top: 52px !important; }
+      body.close .sidebar { transform: none !important; box-shadow: 0 0 60px rgba(0, 0, 0, .55); }
+      body.close .content { transform: none !important; }
+      .content { left: 0 !important; padding-top: 0 !important; }
+      .sidebar-foot { padding-bottom: 14px; }
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
@@ -1232,6 +1260,19 @@
             var tt = document.createElement('div'); tt.className = 'theme-wrap';
             tt.innerHTML = '<button type="button" class="theme-toggle" aria-label="Toggle light and dark theme" title="Toggle light / dark theme"><svg class="i-sun" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg><svg class="i-moon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.8 5.8 0 1 0 7.1 7.1z"/></svg><span class="theme-label"></span></button>';
             document.body.appendChild(tt);
+
+            // phone top bar (CSS only shows it on small screens)
+            var mb = document.createElement('div'); mb.className = 'mobile-bar';
+            mb.innerHTML = '<a class="mb-title" href="#/">ROTD Wiki</a><button type="button" class="mb-search" aria-label="Find an export"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.6"/><path d="M10.6 10.6 14 14"/></svg></button>';
+            mb.querySelector('.mb-search').addEventListener('click', openPalette);
+            document.body.appendChild(mb);
+            // the menu button lives inside <main> (its own stacking layer), which hid it under the new bar: move it out
+            var tg0 = document.querySelector('.sidebar-toggle'); if (tg0) document.body.appendChild(tg0);
+            // on a phone the menu closes itself after you pick a page or tap the page behind it
+            document.addEventListener('click', function (e) {
+              if (innerWidth > 768 || !document.body.classList.contains('close')) return;
+              if (e.target.closest('.sidebar a') || e.target.closest('.content')) { var tg = document.querySelector('.sidebar-toggle'); if (tg) tg.click(); }
+            });
             var sb = document.querySelector('.sidebar'); if (sb) sb.appendChild(foot);
             var tb = tt.querySelector('.theme-toggle'), tl = tt.querySelector('.theme-label');
             var sync = function () { tl.textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light'; };
