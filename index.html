@@ -11,6 +11,8 @@
   <meta property="og:description" content="Exports, events and APIs of the ROTD resources, with parameters, return values and examples.">
   <meta property="og:url" content="https://lysoon.github.io/rotd_tebexwiki/">
   <meta name="twitter:card" content="summary">
+  <link rel="alternate" type="text/plain" href="llms.txt" title="llms.txt (index for AI tools)">
+  <link rel="alternate" type="text/plain" href="llms-full.txt" title="llms-full.txt (the whole wiki in one file)">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0c0f'/%3E%3Crect x='9' y='9' width='14' height='14' rx='3' fill='%23b8ff3d'/%3E%3C/svg%3E">
   <script>try { document.documentElement.dataset.theme = localStorage.getItem('rotd-theme') || 'dark'; } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -322,6 +324,9 @@
     }
     .page-foot .store-link:hover { transform: translateY(-2px); background: rgba(var(--ac), .18); box-shadow: 0 10px 26px -12px rgba(var(--ac), .6); }
     .page-foot { align-items: center; }
+    .page-foot .ai-note { flex: 1 1 260px; text-align: center; font-size: 12px; }
+    .page-foot .ai-note i { font-style: normal; opacity: .7; }
+    @media (max-width: 640px) { .page-foot .ai-note { order: 3; flex-basis: 100%; text-align: left; } }
     .sidebar-foot a { color: var(--accent); border-color: rgba(var(--ac), .3); }
 
     /* ---------- accessibility ---------- */
@@ -722,7 +727,19 @@
 <body>
   <div id="read-progress"></div>
   <button id="to-top" aria-label="Back to top">&uarr;</button>
-  <div id="app"></div>
+  <!-- Shown only until the page loads, and to anything that cannot run JavaScript (AI tools, crawlers). -->
+  <div id="app">
+    <h1>ROTD Developer Wiki</h1>
+    <p>Documentation for the exports, events and APIs of the ROTD FiveM resources, with parameters, return values and examples.</p>
+    <p><strong>This website needs JavaScript. If you are an AI assistant or a tool that cannot run it, read the plain-text versions instead:</strong></p>
+    <ul>
+      <li><a href="llms-full.txt">llms-full.txt</a>: the whole wiki in one file (best choice)</li>
+      <li><a href="llms.txt">llms.txt</a>: index of every page</li>
+      <li><a href="Export-Index.md">Export-Index.md</a>: every export A to Z with its side (server / client / shared)</li>
+      <li>Each page is also plain Markdown, for example <a href="rotd_zones.md">rotd_zones.md</a>, <a href="rotd_squad.md">rotd_squad.md</a>, <a href="rotd_classystem.md">rotd_classystem.md</a>.</li>
+    </ul>
+    <p>Rules: only use documented exports, respect the SERVER / CLIENT / SHARED side, src is a server id (number), cid is a character id (string), handle nil / false returns.</p>
+  </div>
   <script>
     window.$docsify = {
       name: 'ROTD Wiki',
@@ -1165,7 +1182,8 @@
             var f = document.createElement('div'); f.className = 'page-foot';
             if (/^#\/?(\?|$)/.test(location.hash) === false && root.querySelector('h1') && /^Page not found/.test(root.querySelector('h1').textContent)) return;
             var store = '<a class="store-link" href="https://rogue-of-the-dead-rp.tebex.io/" target="_blank" rel="noopener">Get ROTD on Tebex &#8599;</a>';
-            var render = function () { f.innerHTML = (verInfo && verInfo.updated ? '<span>Last updated ' + verInfo.updated + '</span>' : '<span></span>') + store; };
+            var ai = '<span class="ai-note">Using an AI? Give it <a href="llms-full.txt" target="_blank" rel="noopener">llms-full.txt</a> <i>(whole wiki, plain text)</i> or <a href="llms.txt" target="_blank" rel="noopener">llms.txt</a></span>';
+            var render = function () { f.innerHTML = (verInfo && verInfo.updated ? '<span>Last updated ' + verInfo.updated + '</span>' : '<span></span>') + ai + store; };
             render(); root.appendChild(f);
             if (!verInfo) fetch('version.json').then(function (r) { return r.json(); }).then(function (j) { verInfo = j; render(); }).catch(function () {});
           }

@@ -1,5 +1,7 @@
 # Getting started
 
+How exports, client and server sides, player identifiers and registration hooks work in the ROTD pack. Read this once, every other page builds on it.
+
 ## Calling an export
 
 ```lua

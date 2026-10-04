@@ -1,5 +1,7 @@
 # Small exports
 
+Tiny exports of two resources, `rotd_events` and `rotd_mystery_merchant`. Both list the vehicles they currently own, so cleanup scripts such as `vehicle_spawner` leave those vehicles alone.
+
 ## rotd_events
 
 ### Server exports

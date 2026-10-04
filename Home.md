@@ -21,6 +21,29 @@ Documentation for the exports, events and APIs of the ROTD resources, with examp
 | [[vehicle_spawner]] | vehicle protection, cleanup timer, damage hooks |
 | [[Small-Exports]] | rotd_events and rotd_mystery_merchant |
 
+> [!NOTE]
 > The wiki describes the exports as they are in the code today. Resources that are not converted to `rotd_bridge` yet may change their internals (never their export signatures) during the multi-framework conversion.
 
-**Publishing this wiki:** this folder is in GitHub-wiki format. Clone `https://github.com/<you>/<repo>.wiki.git`, copy these `.md` files in, commit and push. `[[Page-Name]]` links and `_Sidebar.md` work as they are.
+## Using an AI assistant?
+
+If you write or fix your FiveM server with an AI (Claude, ChatGPT, Cursor, Copilot, ...), give it these plain-text files. An AI cannot run this website's JavaScript, but it can read these without problems:
+
+| File | Use it for |
+|---|---|
+| https://lysoon.github.io/rotd_tebexwiki/llms-full.txt | the **whole wiki in one file**. Best choice, hand this one to your AI |
+| https://lysoon.github.io/rotd_tebexwiki/llms.txt | a short index of every page |
+| https://lysoon.github.io/rotd_tebexwiki/Export-Index.md | every export, A to Z, with its side and a one-line description |
+
+Paste this to your AI before you ask for code:
+
+```text
+Read https://lysoon.github.io/rotd_tebexwiki/llms-full.txt first.
+It is the API documentation of the ROTD FiveM resource pack.
+Only use exports that are listed there and never invent one.
+Respect the SERVER / CLIENT / SHARED side of every export.
+src is a server id (number), cid is a character id (string).
+Handle nil / false returns, and run blocking exports inside CreateThread.
+If something you need is not documented, say so instead of guessing.
+```
+
+Every page of the website also has these links in its footer.
