@@ -229,6 +229,58 @@
     }
     .markdown-section blockquote p { margin: 0; }
 
+    /* per-export cards */
+    .export-card {
+      position: relative; margin: 20px 0; padding: 22px 24px 18px; border: 1px solid var(--line); border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+      transition: border-color .3s, box-shadow .4s, transform .4s var(--ease);
+    }
+    .export-card:hover { border-color: rgba(184,255,61,.3); box-shadow: 0 18px 50px -24px rgba(184,255,61,.25); }
+    .export-card:target-within, .export-card.flash { animation: flash 1.4s var(--ease); }
+    @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(184,255,61,.6); } 100% { box-shadow: 0 0 0 18px rgba(184,255,61,0); } }
+    .export-card > h4 {
+      margin: 0 0 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+      font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 1.02rem; color: var(--head);
+    }
+    .export-card > h4 code { background: none; border: 0; padding: 0; color: var(--head); font-size: 1em; }
+    .export-card > h4 code .fn { color: var(--accent); font-weight: 600; }
+    .export-card > h4 code .args { color: #9aa6b4; }
+    .export-card > h4 a.anchor { color: inherit; border: 0; }
+    .badge {
+      font: 600 10px/1 "Space Grotesk", sans-serif; letter-spacing: 1.2px; text-transform: uppercase;
+      padding: 5px 8px; border-radius: 6px; border: 1px solid;
+    }
+    .badge.server { color: var(--accent); border-color: rgba(184,255,61,.35); background: rgba(184,255,61,.08); }
+    .badge.client { color: #7dd3fc; border-color: rgba(125,211,252,.35); background: rgba(125,211,252,.08); }
+    .export-card > p { margin: .5em 0; }
+    .export-card table { margin: 14px 0; border-radius: 12px; font-size: 14px; }
+    .export-card th { padding: 9px 14px; }
+    .export-card td { padding: 9px 14px; }
+    .export-card td:first-child code { color: #ffd479; background: rgba(255,212,121,.08); border-color: rgba(255,212,121,.2); }
+    .export-card p.returns {
+      display: flex; gap: 12px; align-items: baseline; margin: 14px 0 4px; padding: 12px 14px;
+      background: rgba(184,255,61,.05); border: 1px solid rgba(184,255,61,.16); border-radius: 12px;
+    }
+    .export-card p.returns > strong:first-child {
+      flex: none; font: 600 10.5px/1 "Space Grotesk", sans-serif; letter-spacing: 1.3px; text-transform: uppercase; color: var(--accent);
+    }
+    .export-card blockquote { margin: 12px 0; border-left-color: #ffb454; background: linear-gradient(90deg, rgba(255,180,84,.09), transparent); }
+    .export-card details { margin-top: 14px; }
+    .export-card summary {
+      display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; user-select: none;
+      font: 600 12.5px "Space Grotesk", sans-serif; letter-spacing: .4px; color: var(--head);
+      padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(255,255,255,.03);
+      transition: border-color .25s, color .25s, background .25s, transform .3s var(--ease);
+    }
+    .export-card summary::-webkit-details-marker { display: none; }
+    .export-card summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(-45deg); transition: transform .3s var(--ease); }
+    .export-card summary:hover { border-color: rgba(184,255,61,.5); color: var(--accent); transform: translateY(-1px); }
+    .export-card details[open] > summary { border-color: rgba(184,255,61,.45); background: var(--accent-soft); color: var(--accent); }
+    .export-card details[open] > summary::before { transform: rotate(45deg); }
+    .export-card details[open] > :not(summary) { animation: unfold .45s var(--ease) both; transform-origin: top; }
+    @keyframes unfold { from { opacity: 0; transform: translateY(-8px) scaleY(.96); } }
+    .export-card details pre { margin-bottom: 4px; }
+
     /* scroll reveal */
     .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
     .reveal.in { opacity: 1; transform: none; }
@@ -293,14 +345,50 @@
               .replace(/\[\[([^\]]+)\]\]/g, '[$1]($1)');
           });
 
+          // turn every "#### `Name(args)`" block into an export card
+          function buildCards() {
+            var root = document.querySelector('.markdown-section');
+            if (!root) return;
+            var kids = Array.prototype.slice.call(root.children), side = '';
+            kids.forEach(function (el, i) {
+              if (el.tagName === 'H2') {
+                var t = el.textContent.toLowerCase();
+                side = t.indexOf('server') > -1 ? 'server' : t.indexOf('client') > -1 ? 'client' : '';
+              }
+              if (el.tagName !== 'H4') return;
+              var card = document.createElement('div');
+              card.className = 'export-card';
+              root.insertBefore(card, el);
+              card.appendChild(el);
+              var n = kids[i + 1];
+              while (n && !/^H[1-4]$/.test(n.tagName)) { var next = n.nextElementSibling; card.appendChild(n); n = next; }
+              var code = el.querySelector('code');
+              if (code && /\(/.test(code.textContent)) {
+                var txt = code.textContent, k = txt.indexOf('(');
+                code.innerHTML = '<span class="fn"></span><span class="args"></span>';
+                code.firstChild.textContent = txt.slice(0, k);
+                code.lastChild.textContent = txt.slice(k);
+                if (side) { var b = document.createElement('span'); b.className = 'badge ' + side; b.textContent = side; el.insertBefore(b, el.firstChild); }
+              }
+              card.querySelectorAll(':scope > p').forEach(function (p) {
+                var f = p.firstElementChild;
+                if (f && f.tagName === 'STRONG' && /^Returns/.test(f.textContent)) p.classList.add('returns');
+              });
+            });
+            // flash the card that matches a deep link
+            var m = location.hash.match(/[?&]id=([^&]+)/);
+            if (m) { var h = document.getElementById(decodeURIComponent(m[1])); var c = h && h.closest('.export-card'); if (c) { c.classList.add('flash'); } }
+          }
+
           var io;
           hook.doneEach(function () {
+            buildCards();
             // scroll reveal for heavy blocks
             if (io) io.disconnect();
             io = new IntersectionObserver(function (entries) {
               entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
             }, { rootMargin: '0px 0px -8% 0px', threshold: 0.05 });
-            document.querySelectorAll('.markdown-section table, .markdown-section pre, .markdown-section blockquote, .markdown-section h2')
+            document.querySelectorAll('.markdown-section > table, .markdown-section > pre, .markdown-section > blockquote, .markdown-section > h2, .markdown-section .export-card')
               .forEach(function (el) { el.classList.add('reveal'); io.observe(el); });
           });
 
