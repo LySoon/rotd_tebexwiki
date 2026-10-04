@@ -6,10 +6,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0">
   <meta name="description" content="Exports, events and APIs of the ROTD resources, with examples.">
   <meta name="theme-color" content="#0a0c0f">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="ROTD Developer Wiki">
+  <meta property="og:description" content="Exports, events and APIs of the ROTD resources, with parameters, return values and examples.">
+  <meta property="og:url" content="https://lysoon.github.io/rotd_tebexwiki/">
+  <meta name="twitter:card" content="summary">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0c0f'/%3E%3Crect x='9' y='9' width='14' height='14' rx='3' fill='%23b8ff3d'/%3E%3C/svg%3E">
+  <script>try { document.documentElement.dataset.theme = localStorage.getItem('rotd-theme') || 'dark'; } catch (e) { document.documentElement.dataset.theme = 'dark'; }</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/dark.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/themes/dark.css" integrity="sha384-kxJ035EJ2os5w6E9Ysqnvy67DqD2lpcLU1SFJFDxCZCQerjlT0ULLvB+70KWpikn" crossorigin="anonymous">
   <style>
     :root {
       --bg: #0a0c0f;
@@ -24,7 +31,17 @@
       --accent-2: #ff5a4d;
       --accent-soft: rgba(184, 255, 61, .10);
       --ease: cubic-bezier(.22, 1, .36, 1);
-      --sidebar-w: 288px;
+      --sidebar-w: 264px;
+      --fx: 255,255,255; --ac: 184,255,61; --code-bg: #07090c; --code-fg: #e7ffb8; --sb-bg: #0d1014; --text-2: #aab3bf;
+      --tk-comment: #5b6573; --tk-string: #b8ff3d; --tk-keyword: #ff7a6e; --tk-fn: #7dd3fc; --tk-num: #ffcf6e; --tk-punct: #94a0ae;
+    }
+    :root[data-theme="light"] {
+      --bg: #f5f6f2; --panel: rgba(255,255,255,.82); --panel-solid: #fff;
+      --line: rgba(20,24,30,.10); --line-strong: rgba(20,24,30,.18);
+      --text: #2b333d; --muted: #667180; --head: #12161b; --text-2: #46505c;
+      --accent: #3d7a00; --accent-soft: rgba(61,122,0,.10); --accent-2: #d63a2c;
+      --fx: 20,24,30; --ac: 61,122,0; --code-bg: #eef1ea; --code-fg: #2d5a00; --sb-bg: #eef1ea;
+      --tk-comment: #8a94a0; --tk-string: #2d7a00; --tk-keyword: #c0392b; --tk-fn: #0b6fa4; --tk-num: #a55b00; --tk-punct: #667180;
     }
     * { -webkit-font-smoothing: antialiased; }
     html { scroll-behavior: smooth; }
@@ -42,7 +59,7 @@
     }
     body::before {
       width: 520px; height: 520px; top: -160px; right: -120px;
-      background: radial-gradient(circle, rgba(184,255,61,.22), transparent 65%);
+      background: radial-gradient(circle, rgba(var(--ac),.22), transparent 65%);
       animation: drift-a 22s ease-in-out infinite alternate;
     }
     body::after {
@@ -67,7 +84,7 @@
     #read-progress {
       position: fixed; top: 0; left: 0; height: 2px; width: 0; z-index: 99;
       background: linear-gradient(90deg, var(--accent), #6dffb4);
-      box-shadow: 0 0 12px rgba(184,255,61,.7);
+      box-shadow: 0 0 12px rgba(var(--ac),.7);
       transition: width .1s linear;
     }
 
@@ -90,18 +107,18 @@
     }
     .sidebar .app-name-link::before {
       content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--accent);
-      box-shadow: 0 0 0 4px var(--accent-soft), 0 0 18px rgba(184,255,61,.65);
+      box-shadow: 0 0 0 4px var(--accent-soft), 0 0 18px rgba(var(--ac),.65);
       animation: pulse 2.8s ease-in-out infinite;
     }
-    @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(184,255,61,.04), 0 0 26px rgba(184,255,61,.9); } }
+    @keyframes pulse { 50% { box-shadow: 0 0 0 7px rgba(var(--ac),.04), 0 0 26px rgba(var(--ac),.9); } }
     .sidebar .search { margin: 14px 18px 4px; padding: 0; border: 0; }
     .sidebar .search input {
-      background: rgba(255,255,255,.04) !important; color: var(--head);
+      background: rgba(var(--fx),.04) !important; color: var(--head);
       border: 1px solid var(--line) !important; border-radius: 10px; padding: 9px 40px 9px 14px;
       font-family: inherit; font-size: 14px; transition: border-color .25s, box-shadow .25s, background .25s;
     }
     .sidebar .search input:focus {
-      border-color: rgba(184,255,61,.55) !important; background: rgba(255,255,255,.06) !important;
+      border-color: rgba(var(--ac),.55) !important; background: rgba(var(--fx),.06) !important;
       box-shadow: 0 0 0 4px var(--accent-soft); outline: none;
     }
     .search .clear-button { opacity: .6; }
@@ -127,7 +144,7 @@
       color: var(--muted); position: relative; overflow: hidden;
       transition: color .25s var(--ease), background .25s var(--ease), transform .35s var(--ease);
     }
-    .sidebar ul li a:hover { color: var(--head); background: rgba(255,255,255,.05); transform: translateX(3px); text-decoration: none; }
+    .sidebar ul li a:hover { color: var(--head); background: rgba(var(--fx),.05); transform: translateX(3px); text-decoration: none; }
     .sidebar ul li.active > a {
       color: var(--accent); background: var(--accent-soft); font-weight: 600; border-right: 0;
     }
@@ -140,21 +157,21 @@
     .sidebar ul li ul a { font-size: 13px; padding: 5px 10px; }
     .sidebar-foot {
       position: sticky; bottom: 0; padding: 18px 20px 14px; margin-top: -60px;
-      background: linear-gradient(to top, #0d1014 55%, transparent); z-index: 5; pointer-events: none;
+      background: linear-gradient(to top, var(--sb-bg) 55%, transparent); z-index: 5; pointer-events: none;
     }
     .sidebar-foot a {
       pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted);
       border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; text-decoration: none;
       transition: color .25s, border-color .25s, transform .3s var(--ease);
     }
-    .sidebar-foot a:hover { color: var(--accent); border-color: rgba(184,255,61,.4); transform: translateY(-2px); }
+    .sidebar-foot a:hover { color: var(--accent); border-color: rgba(var(--ac),.4); transform: translateY(-2px); }
     .sidebar-toggle { background: transparent; z-index: 20; }
     .sidebar-toggle span { background-color: var(--head); }
 
     /* content */
     .content { left: var(--sidebar-w); }
     body.close .content { left: 0; }
-    .markdown-section { max-width: 880px; padding: 44px 40px 90px; }
+    .markdown-section { max-width: 880px; padding: 44px 30px 90px; }
     .markdown-section > * { animation: rise .7s var(--ease) both; }
     .markdown-section > *:nth-child(1) { animation-delay: .02s; }
     .markdown-section > *:nth-child(2) { animation-delay: .08s; }
@@ -166,7 +183,7 @@
     .markdown-section h1 {
       font-family: "Space Grotesk", sans-serif; font-weight: 700; font-size: 2.7rem; letter-spacing: -1.2px; line-height: 1.08;
       margin: 0 0 .5em; border: 0; padding: 0;
-      background: linear-gradient(120deg, #fff 30%, var(--accent) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      background: linear-gradient(120deg, var(--head) 30%, var(--accent) 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
     }
     .markdown-section h2 {
       font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 1.55rem; letter-spacing: -.5px; color: var(--head);
@@ -185,25 +202,25 @@
 
     .markdown-section code {
       font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .86em;
-      background: rgba(255,255,255,.06); color: #e7ffb8; border: 1px solid var(--line); border-radius: 6px; padding: .12em .45em;
+      background: rgba(var(--fx),.06); color: var(--code-fg); border: 1px solid var(--line); border-radius: 6px; padding: .12em .45em;
     }
     .markdown-section pre {
-      background: #07090c !important; border: 1px solid var(--line); border-radius: 14px; margin: 1.4em 0; padding: 0;
+      background: var(--code-bg) !important; border: 1px solid var(--line); border-radius: 14px; margin: 1.4em 0; padding: 0;
       box-shadow: 0 10px 40px -18px rgba(0,0,0,.8); position: relative;
       transition: border-color .3s, box-shadow .3s, transform .4s var(--ease);
     }
-    .markdown-section pre:hover { border-color: rgba(184,255,61,.28); box-shadow: 0 16px 50px -18px rgba(184,255,61,.18); transform: translateY(-2px); }
+    .markdown-section pre:hover { border-color: rgba(var(--ac),.28); box-shadow: 0 16px 50px -18px rgba(var(--ac),.18); transform: translateY(-2px); }
     .markdown-section pre::before {
       content: ""; display: block; height: 30px; border-bottom: 1px solid var(--line); border-radius: 14px 14px 0 0;
-      background: radial-gradient(circle at 18px 15px, #ff5f57 4px, transparent 5px), radial-gradient(circle at 36px 15px, #febc2e 4px, transparent 5px), radial-gradient(circle at 54px 15px, #28c840 4px, transparent 5px), rgba(255,255,255,.025);
+      background: radial-gradient(circle at 18px 15px, #ff5f57 4px, transparent 5px), radial-gradient(circle at 36px 15px, #febc2e 4px, transparent 5px), radial-gradient(circle at 54px 15px, #28c840 4px, transparent 5px), rgba(var(--fx),.025);
     }
     .markdown-section pre > code { display: block; background: transparent; border: 0; padding: 18px 22px; color: var(--text); font-size: 13.5px; line-height: 1.7; overflow-x: auto; }
     .markdown-section pre[data-lang]::after {
       content: attr(data-lang); position: absolute; left: 74px; right: auto; top: 8px; z-index: 1;
       font: 500 11px "JetBrains Mono", monospace; letter-spacing: .6px; text-transform: lowercase; color: var(--muted); opacity: .85;
     }
-    .token.comment { color: #5b6573; } .token.string { color: #b8ff3d; } .token.keyword { color: #ff7a6e; }
-    .token.function { color: #7dd3fc; } .token.number, .token.boolean { color: #ffcf6e; } .token.punctuation, .token.operator { color: #94a0ae; }
+    .token.comment { color: var(--tk-comment); } .token.string { color: var(--tk-string); } .token.keyword { color: var(--tk-keyword); }
+    .token.function { color: var(--tk-fn); } .token.number, .token.boolean { color: var(--tk-num); } .token.punctuation, .token.operator { color: var(--tk-punct); }
     .docsify-copy-code-button {
       top: 3px !important; right: 8px !important; background: transparent !important; color: var(--muted) !important;
       border: 1px solid var(--line-strong) !important; border-radius: 6px !important; padding: 2px 10px !important; font-size: 11px !important;
@@ -214,10 +231,10 @@
 
     .markdown-section table {
       display: table; width: 100%; border-collapse: separate; border-spacing: 0; margin: 1.6em 0;
-      border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: rgba(255,255,255,.015); font-size: 14.5px;
+      border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: rgba(var(--fx),.015); font-size: 14.5px;
     }
     .markdown-section th {
-      background: rgba(255,255,255,.04); color: var(--muted); font: 600 11px "Space Grotesk", sans-serif;
+      background: rgba(var(--fx),.04); color: var(--muted); font: 600 11px "Space Grotesk", sans-serif;
       letter-spacing: 1.2px; text-transform: uppercase; text-align: left; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--line);
     }
     .markdown-section td { padding: 11px 16px; border: 0; border-bottom: 1px solid var(--line); vertical-align: top; }
@@ -225,7 +242,7 @@
     .markdown-section tr:nth-child(2n) { background: transparent; }
     .markdown-section tbody tr { transition: background .2s; }
     .markdown-section tbody tr:hover { background: var(--accent-soft); }
-    .markdown-section td:first-child code { color: var(--accent); background: rgba(184,255,61,.08); border-color: rgba(184,255,61,.18); }
+    .markdown-section td:first-child code { color: var(--accent); background: rgba(var(--ac),.08); border-color: rgba(var(--ac),.18); }
 
     .markdown-section blockquote {
       margin: 1.6em 0; padding: 14px 20px; color: var(--text); background: linear-gradient(90deg, var(--accent-soft), transparent);
@@ -236,25 +253,25 @@
     /* per-export cards */
     .export-card {
       position: relative; margin: 20px 0; padding: 22px 24px 18px; border: 1px solid var(--line); border-radius: 18px;
-      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.012));
+      background: linear-gradient(180deg, rgba(var(--fx),.035), rgba(var(--fx),.012));
       transition: border-color .3s, box-shadow .4s, transform .4s var(--ease);
     }
-    .export-card:hover { border-color: rgba(184,255,61,.3); box-shadow: 0 18px 50px -24px rgba(184,255,61,.25); }
+    .export-card:hover { border-color: rgba(var(--ac),.3); box-shadow: 0 18px 50px -24px rgba(var(--ac),.25); }
     .export-card:target-within, .export-card.flash { animation: flash 1.4s var(--ease); }
-    @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(184,255,61,.6); } 100% { box-shadow: 0 0 0 18px rgba(184,255,61,0); } }
+    @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(var(--ac),.6); } 100% { box-shadow: 0 0 0 18px rgba(var(--ac),0); } }
     .export-card > h4 {
       margin: 0 0 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
       font-family: "JetBrains Mono", monospace; font-weight: 500; font-size: 1.02rem; color: var(--head);
     }
     .export-card > h4 code { background: none; border: 0; padding: 0; color: var(--head); font-size: 1em; }
     .export-card > h4 code .fn { color: var(--accent); font-weight: 600; }
-    .export-card > h4 code .args { color: #9aa6b4; }
+    .export-card > h4 code .args { color: var(--muted); }
     .export-card > h4 a.anchor { color: inherit; border: 0; }
     .badge {
       font: 600 10px/1 "Space Grotesk", sans-serif; letter-spacing: 1.2px; text-transform: uppercase;
       padding: 5px 8px; border-radius: 6px; border: 1px solid;
     }
-    .badge.server { color: var(--accent); border-color: rgba(184,255,61,.35); background: rgba(184,255,61,.08); }
+    .badge.server { color: var(--accent); border-color: rgba(var(--ac),.35); background: rgba(var(--ac),.08); }
     .badge.client { color: #7dd3fc; border-color: rgba(125,211,252,.35); background: rgba(125,211,252,.08); }
     .badge.shared { color: #c4b5fd; border-color: rgba(196,181,253,.35); background: rgba(196,181,253,.08); }
     .export-card > p { margin: .5em 0; }
@@ -264,7 +281,7 @@
     .export-card td:first-child code { color: #ffd479; background: rgba(255,212,121,.08); border-color: rgba(255,212,121,.2); }
     .export-card p.returns {
       display: flex; gap: 12px; align-items: baseline; margin: 14px 0 4px; padding: 12px 14px;
-      background: rgba(184,255,61,.05); border: 1px solid rgba(184,255,61,.16); border-radius: 12px;
+      background: rgba(var(--ac),.05); border: 1px solid rgba(var(--ac),.16); border-radius: 12px;
     }
     .export-card p.returns > strong:first-child {
       flex: none; font: 600 10.5px/1 "Space Grotesk", sans-serif; letter-spacing: 1.3px; text-transform: uppercase; color: var(--accent);
@@ -277,7 +294,7 @@
       opacity: .55; transition: opacity .25s, color .25s, border-color .25s, background .25s, transform .3s var(--ease);
     }
     .export-card:hover .copy-name, .copy-name:focus-visible { opacity: 1; }
-    .copy-name:hover { color: var(--accent); border-color: rgba(184,255,61,.5); transform: translateY(-1px); }
+    .copy-name:hover { color: var(--accent); border-color: rgba(var(--ac),.5); transform: translateY(-1px); }
     .copy-name.done { color: var(--bg); background: var(--accent); border-color: var(--accent); opacity: 1; }
     @media (hover: none) { .copy-name { opacity: 1; } }
     .export-card blockquote { margin: 12px 0; border-left-color: #ffb454; background: linear-gradient(90deg, rgba(255,180,84,.09), transparent); }
@@ -285,26 +302,294 @@
     .export-card summary {
       display: inline-flex; align-items: center; gap: 8px; cursor: pointer; list-style: none; user-select: none;
       font: 600 12.5px "Space Grotesk", sans-serif; letter-spacing: .4px; color: var(--head);
-      padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(255,255,255,.03);
+      padding: 8px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: rgba(var(--fx),.03);
       transition: border-color .25s, color .25s, background .25s, transform .3s var(--ease);
     }
     .export-card summary::-webkit-details-marker { display: none; }
     .export-card summary::before { content: ""; width: 7px; height: 7px; border-right: 2px solid var(--accent); border-bottom: 2px solid var(--accent); transform: rotate(-45deg); transition: transform .3s var(--ease); }
-    .export-card summary:hover { border-color: rgba(184,255,61,.5); color: var(--accent); transform: translateY(-1px); }
-    .export-card details[open] > summary { border-color: rgba(184,255,61,.45); background: var(--accent-soft); color: var(--accent); }
+    .export-card summary:hover { border-color: rgba(var(--ac),.5); color: var(--accent); transform: translateY(-1px); }
+    .export-card details[open] > summary { border-color: rgba(var(--ac),.45); background: var(--accent-soft); color: var(--accent); }
     .export-card details[open] > summary::before { transform: rotate(45deg); }
     .export-card details[open] > :not(summary) { animation: unfold .45s var(--ease) both; transform-origin: top; }
     @keyframes unfold { from { opacity: 0; transform: translateY(-8px) scaleY(.96); } }
     .export-card details pre { margin-bottom: 4px; }
 
+    /* ---------- accessibility ---------- */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+    .skip {
+      position: fixed; left: 12px; top: -60px; z-index: 300; padding: 10px 16px; border-radius: 10px; font: 600 13px Inter, sans-serif;
+      color: var(--bg); background: var(--accent); text-decoration: none; transition: top .2s var(--ease);
+    }
+    .skip:focus { top: 12px; }
+    .markdown-section:focus { outline: none; }
+
+    /* ---------- breadcrumbs ---------- */
+    .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 18px; font: 500 12.5px Inter, sans-serif; color: var(--muted); }
+    .crumbs a { color: var(--muted); border: 0; }
+    .crumbs a:hover { color: var(--accent); }
+    .crumbs i { font-style: normal; opacity: .45; }
+    .crumbs b { font-weight: 600; color: var(--text-2); }
+
+    /* ---------- sidebar counts ---------- */
+    .sidebar ul li a { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .sidebar .cnt {
+      flex: none; font: 500 10.5px "JetBrains Mono", monospace; color: var(--muted); padding: 2px 7px; border-radius: 999px;
+      background: rgba(var(--fx), .06); transition: background .25s, color .25s;
+    }
+    .sidebar ul li.active > a .cnt { color: var(--accent); background: rgba(var(--ac), .14); }
+
+    /* ---------- home landing ---------- */
+    .eyebrow { font: 600 11px/1 "Space Grotesk", sans-serif; letter-spacing: 2.2px; text-transform: uppercase; color: var(--accent); margin: 0 0 14px; }
+    .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0 8px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 10px; padding: 11px 18px; border-radius: 12px; cursor: pointer; text-decoration: none;
+      font: 600 13.5px Inter, sans-serif; color: var(--head); background: rgba(var(--fx), .04); border: 1px solid var(--line-strong);
+      transition: transform .3s var(--ease), border-color .25s, background .25s, color .25s;
+    }
+    .btn:hover { transform: translateY(-2px); border-color: rgba(var(--ac), .5); color: var(--accent); }
+    .btn.primary { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+    .btn.primary:hover { color: var(--bg); box-shadow: 0 10px 30px -10px rgba(var(--ac), .7); }
+    .btn kbd { font: 500 10.5px "JetBrains Mono", monospace; padding: 1px 6px; border-radius: 5px; border: 1px solid rgba(0,0,0,.25); opacity: .75; }
+    :root[data-theme="light"] .btn.primary { color: #fff; }
+    .hero-stats { display: flex; gap: 22px; flex-wrap: wrap; margin: 6px 0 0; font: 500 13px Inter, sans-serif; color: var(--muted); }
+    .hero-stats b { color: var(--head); font-family: "Space Grotesk", sans-serif; font-size: 1.25em; margin-right: 5px; }
+    .res-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin: 18px 0 8px; }
+    .res-card {
+      position: relative; display: flex; flex-direction: column; gap: 8px; padding: 18px 18px 16px; border-radius: 16px; text-decoration: none; overflow: hidden;
+      border: 1px solid var(--line); background: linear-gradient(180deg, rgba(var(--fx), .035), rgba(var(--fx), .01));
+      transition: transform .4s var(--ease), border-color .3s, box-shadow .4s;
+    }
+    .res-card::before {
+      content: ""; position: absolute; left: 0; right: 0; top: 0; height: 2px; background: linear-gradient(90deg, var(--accent), transparent);
+      transform: scaleX(0); transform-origin: left; transition: transform .5s var(--ease);
+    }
+    .res-card:hover { transform: translateY(-4px); border-color: rgba(var(--ac), .35); box-shadow: 0 20px 50px -26px rgba(var(--ac), .45); }
+    .res-card:hover::before { transform: scaleX(1); }
+    .res-card h3 { margin: 0; font: 600 15px "JetBrains Mono", monospace; color: var(--head); }
+    .res-card p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); flex: 1; }
+    .res-card .meta { display: flex; justify-content: space-between; align-items: center; font: 500 11.5px "JetBrains Mono", monospace; color: var(--accent); min-height: 16px; }
+    .res-card .meta span:last-child { transition: transform .3s var(--ease); }
+    .res-card:hover .meta span:last-child { transform: translateX(4px); }
+    .res-card { animation: rise .6s var(--ease) both; }
+
+    /* ---------- toolbar (filters, expand, compact) ---------- */
+    .toolbar {
+      position: sticky; top: 56px; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 26px 0 8px; padding: 10px 12px;
+      border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel);
+      backdrop-filter: blur(14px) saturate(140%); -webkit-backdrop-filter: blur(14px) saturate(140%);
+    }
+    .toolbar .tb-spacer { flex: 1; }
+    .chip, .tb-btn {
+      display: inline-flex; align-items: center; gap: 7px; cursor: pointer; padding: 6px 12px; border-radius: 999px; font: 600 12px Inter, sans-serif;
+      color: var(--muted); background: transparent; border: 1px solid var(--line-strong);
+      transition: color .2s, background .2s, border-color .2s, transform .25s var(--ease);
+    }
+    .chip:hover, .tb-btn:hover { color: var(--head); border-color: var(--muted); transform: translateY(-1px); }
+    .chip em { font: 500 10.5px "JetBrains Mono", monospace; font-style: normal; opacity: .75; }
+    .chip.on { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+    .chip.on em { opacity: .8; }
+    .chip[data-side="client"].on { background: #7dd3fc; border-color: #7dd3fc; }
+    .chip[data-side="shared"].on { background: #c4b5fd; border-color: #c4b5fd; }
+    :root[data-theme="light"] .chip[data-side="client"].on { background: #0b6fa4; border-color: #0b6fa4; color: #fff; }
+    :root[data-theme="light"] .chip[data-side="shared"].on { background: #6d4fc2; border-color: #6d4fc2; color: #fff; }
+    :root[data-theme="light"] .chip.on[data-side="server"], :root[data-theme="light"] .chip.on[data-side="all"] { color: #fff; }
+    .tb-btn.on { color: var(--accent); border-color: rgba(var(--ac), .5); background: var(--accent-soft); }
+    .tb-keys { font: 500 11px "JetBrains Mono", monospace; color: var(--muted); }
+    .tb-keys kbd { border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 5px; margin: 0 2px; }
+    .card-hidden, .sec-hidden { display: none !important; }
+    @media (hover: none), (max-width: 768px) { .tb-keys { display: none; } }
+
+    /* compact list mode */
+    body.compact .export-card { padding: 14px 18px; margin: 10px 0; }
+    body.compact .export-card > h4 { margin: 0; cursor: pointer; }
+    body.compact .export-card > h4::after {
+      content: ""; order: 5; width: 8px; height: 8px; margin-left: 4px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+      transform: rotate(45deg); transition: transform .3s var(--ease);
+    }
+    body.compact .export-card.open > h4::after { transform: rotate(-135deg); }
+    body.compact .export-card:not(.open) > *:not(h4):not(.desc) { display: none; }
+    body.compact .export-card:not(.open) > .desc { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); }
+    body.compact .export-card.open > h4 { margin-bottom: 10px; }
+
+    /* export names in index tables */
+    .markdown-section a.ref { border: 0; display: inline-block; }
+    .markdown-section a.ref code { cursor: pointer; transition: background .2s, color .2s, border-color .2s, transform .25s var(--ease); }
+    .markdown-section a.ref:hover code { background: rgba(var(--ac), .2); border-color: rgba(var(--ac), .55); transform: translateX(2px); }
+    .markdown-section a.ref code::after { content: " \2193"; opacity: 0; transition: opacity .2s; }
+    .markdown-section a.ref:hover code::after { opacity: .8; }
+
+    /* ---------- pills ---------- */
+    .pill {
+      font: 600 9.5px/1 "Space Grotesk", sans-serif; letter-spacing: 1px; text-transform: uppercase; padding: 4px 7px; border-radius: 6px; border: 1px solid; cursor: help;
+    }
+    .pill-blocking { color: #ffb454; border-color: rgba(255,180,84,.4); background: rgba(255,180,84,.09); }
+    .pill-offline { color: var(--accent); border-color: rgba(var(--ac), .4); background: rgba(var(--ac), .08); }
+    .pill-authorised { color: #ff7a6e; border-color: rgba(255,122,110,.4); background: rgba(255,122,110,.09); }
+    .pill-online { color: #7dd3fc; border-color: rgba(125,211,252,.4); background: rgba(125,211,252,.08); }
+    .pill-internal { color: var(--muted); border-color: var(--line-strong); background: rgba(var(--fx), .04); }
+    .pill-opt { color: var(--muted); border-color: var(--line-strong); background: transparent; margin-left: 8px; cursor: default; letter-spacing: .6px; }
+    :root[data-theme="light"] .pill-blocking { color: #a55b00; border-color: rgba(165,91,0,.4); background: rgba(165,91,0,.08); }
+    :root[data-theme="light"] .pill-authorised { color: #c0392b; border-color: rgba(192,57,43,.4); background: rgba(192,57,43,.08); }
+    :root[data-theme="light"] .pill-online { color: #0b6fa4; border-color: rgba(11,111,164,.4); background: rgba(11,111,164,.08); }
+
+    /* ---------- coloured types ---------- */
+    .ty-nil { color: var(--muted); } .ty-bool { color: var(--tk-num); } .ty-table { color: var(--tk-fn); } .ty-str { color: var(--tk-string); }
+    .ty-num { color: var(--tk-num); } .ty-fn { color: var(--tk-keyword); } .ty-vec { color: #c4b5fd; } .ty-any { color: var(--text-2); }
+    :root[data-theme="light"] .ty-vec { color: #6d4fc2; }
+    .ty-sep { color: var(--muted); opacity: .6; padding: 0 .35em; }
+
+    /* ---------- callouts ---------- */
+    .markdown-section blockquote.callout {
+      --cc: 125, 211, 252; position: relative; margin: 1.6em 0; padding: 14px 18px 14px 18px; border: 1px solid rgba(var(--cc), .28); border-left: 3px solid rgb(var(--cc));
+      border-radius: 0 12px 12px 0; background: linear-gradient(90deg, rgba(var(--cc), .09), transparent 75%);
+    }
+    .callout-title { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font: 600 11px/1 "Space Grotesk", sans-serif; letter-spacing: 1.3px; text-transform: uppercase; color: rgb(var(--cc)); }
+    .callout-title svg { width: 15px; height: 15px; flex: none; }
+    .markdown-section blockquote.callout p { margin: 0 0 .4em; }
+    .markdown-section blockquote.callout p:last-child { margin-bottom: 0; }
+    .callout-tip { --cc: var(--ac); }
+    .callout-warning { --cc: 255, 180, 84; }
+    .callout-important { --cc: 196, 181, 253; }
+    .callout-caution { --cc: 255, 107, 94; }
+    :root[data-theme="light"] .callout-note { --cc: 11, 111, 164; }
+    :root[data-theme="light"] .callout-warning { --cc: 165, 91, 0; }
+    :root[data-theme="light"] .callout-important { --cc: 109, 79, 194; }
+    :root[data-theme="light"] .callout-caution { --cc: 192, 57, 43; }
+    .export-card blockquote.callout { border-left-color: rgb(var(--cc)); background: linear-gradient(90deg, rgba(var(--cc), .09), transparent 75%); }
+
+    /* ---------- phone: tables become stacked rows, tighter cards ---------- */
+    @media (max-width: 640px) {
+      .markdown-section table, .markdown-section thead, .markdown-section tbody, .markdown-section tr, .markdown-section td { display: block !important; width: 100% !important; box-sizing: border-box; }
+      .markdown-section thead { position: absolute; width: 1px !important; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+      .markdown-section table { border-radius: 12px; }
+      .markdown-section tr { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+      .markdown-section tr:last-child { border-bottom: 0; }
+      .markdown-section td { border: 0 !important; padding: 3px 0 !important; overflow-wrap: anywhere; }
+      .markdown-section td[data-label] { display: grid !important; grid-template-columns: 84px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+      .markdown-section td[data-label]::before {
+        content: attr(data-label); font: 600 9.5px/1.4 "Space Grotesk", sans-serif; letter-spacing: 1.1px; text-transform: uppercase; color: var(--muted);
+      }
+      .markdown-section .export-card { padding: 16px 14px 14px; border-radius: 14px; }
+      .markdown-section .export-card table { margin: 12px 0; }
+      .export-card > h4 { gap: 8px; }
+      .export-card > h4 code { overflow-wrap: anywhere; }
+      .copy-grp { margin-left: 0; width: 100%; }
+      .markdown-section code { overflow-wrap: anywhere; }
+      .markdown-section pre > code { padding: 14px; font-size: 12.5px; overflow-wrap: normal; }
+      .export-card p.returns { flex-direction: column; gap: 6px; }
+      .markdown-section td .badge, .markdown-section td .cell > code:only-child { justify-self: start; width: fit-content; max-width: 100%; }
+      .markdown-section td .cell { min-width: 0; overflow-wrap: anywhere; }
+      .markdown-section td .cell > code:only-child { display: inline-block; }
+      .markdown-section thead tr { padding: 0; border: 0; }
+      .markdown-section a.ref { display: block; }
+      .markdown-section a.ref code { white-space: normal; }
+      /* generated index: just name + description, the side is on the card */
+      .auto-tbl td:nth-child(2) { display: none !important; }
+      .auto-tbl td[data-label] { grid-template-columns: 1fr; gap: 2px; }
+      .auto-tbl td[data-label]::before { display: none; }
+      .auto-tbl td:nth-child(3) { color: var(--muted); font-size: 13px; }
+    }
+
+    /* ---------- print ---------- */
+    @media print {
+      body::before, body::after, .sidebar, #toc, .theme-wrap, #read-progress, #to-top, .toolbar, .find-export, #palette, .copy-grp, .skip, .page-foot a,
+      .docsify-copy-code-button, .docsify-pagination-container, .sidebar-toggle, .crumbs { display: none !important; }
+      html, body { background: #fff !important; color: #111 !important; }
+      .content { left: 0 !important; padding: 0 !important; position: static !important; }
+      .content::before { display: none; }
+      .markdown-section { max-width: none !important; padding: 0 !important; color: #111; }
+      .markdown-section *, .markdown-section > * { animation: none !important; opacity: 1 !important; transform: none !important; color: #111 !important; -webkit-text-fill-color: #111 !important; }
+      .export-card, pre, table, blockquote { break-inside: avoid; border-color: #bbb !important; background: #fff !important; box-shadow: none !important; }
+      pre { background: #f4f4f4 !important; }
+      a { color: #111 !important; text-decoration: underline; }
+    }
+
+    /* name / call copy group */
+    .copy-grp { margin-left: auto; display: inline-flex; gap: 6px; }
+    .copy-grp .copy-name { margin-left: 0; padding: 5px 9px; }
+
+    /* find-an-export button + Ctrl+K palette */
+    .find-export {
+      display: flex; align-items: center; justify-content: space-between; width: calc(100% - 36px); margin: 8px 18px 4px; cursor: pointer;
+      padding: 8px 12px; border-radius: 10px; font: 500 13px Inter, sans-serif; color: var(--muted);
+      background: rgba(var(--ac), .06); border: 1px solid rgba(var(--ac), .22);
+      transition: color .25s, border-color .25s, background .25s, transform .3s var(--ease);
+    }
+    .find-export:hover { color: var(--accent); border-color: rgba(var(--ac), .5); background: var(--accent-soft); transform: translateY(-1px); }
+    .find-export kbd, #palette kbd {
+      font: 500 10.5px "JetBrains Mono", monospace; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 6px; background: transparent;
+    }
+    #palette {
+      position: fixed; inset: 0; z-index: 200; display: none; align-items: flex-start; justify-content: center; padding: 12vh 16px 0;
+      background: rgba(5, 7, 10, .55); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    }
+    :root[data-theme="light"] #palette { background: rgba(30, 36, 28, .35); }
+    #palette.open { display: flex; animation: fade .2s ease both; }
+    @keyframes fade { from { opacity: 0; } }
+    #palette .pal-box {
+      width: min(680px, 100%); border: 1px solid var(--line-strong); border-radius: 18px; overflow: hidden;
+      background: var(--panel-solid); box-shadow: 0 30px 80px -20px rgba(0,0,0,.6); animation: pop .3s var(--ease) both;
+    }
+    @keyframes pop { from { opacity: 0; transform: translateY(-10px) scale(.98); } }
+    #palette input {
+      width: 100%; box-sizing: border-box; padding: 18px 22px; font: 500 16px Inter, sans-serif; color: var(--head);
+      background: transparent; border: 0; border-bottom: 1px solid var(--line); outline: none;
+    }
+    #palette ul { list-style: none; margin: 0; padding: 8px; max-height: 52vh; overflow-y: auto; }
+    #palette li {
+      display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 4px 12px; padding: 10px 12px; border-radius: 10px; cursor: pointer;
+    }
+    #palette li.on { background: var(--accent-soft); }
+    #palette .pal-name { font: 500 13.5px "JetBrains Mono", monospace; color: var(--head); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #palette li.on .pal-name { color: var(--accent); }
+    #palette .pal-res { font: 500 11.5px "JetBrains Mono", monospace; color: var(--muted); }
+    #palette .pal-desc { grid-column: 2 / 4; font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #palette li.pal-empty { display: block; cursor: default; color: var(--muted); text-align: center; padding: 28px; }
+    #palette .pal-foot { display: flex; gap: 16px; padding: 10px 18px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); }
+    #palette .pal-foot kbd { margin-right: 4px; }
+
+    /* theme toggle + footer */
+    .sidebar-foot { display: flex; align-items: center; gap: 8px; }
+    .theme-wrap { position: fixed; top: 14px; right: 20px; z-index: 60; }
+    .theme-toggle {
+      display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px 0 11px; border-radius: 999px; cursor: pointer;
+      font: 500 12.5px Inter, sans-serif; color: var(--text-2); background: var(--panel); border: 1px solid var(--line-strong);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      transition: color .25s, border-color .25s, background .25s, transform .3s var(--ease);
+    }
+    .theme-toggle:hover { color: var(--accent); border-color: rgba(var(--ac), .5); transform: translateY(-1px); }
+    .theme-toggle svg { transition: transform .5s var(--ease); }
+    .theme-toggle:hover svg { transform: rotate(40deg); }
+    .theme-toggle .i-sun { display: none; }
+    :root[data-theme="light"] .theme-toggle .i-sun { display: block; }
+    :root[data-theme="light"] .theme-toggle .i-moon { display: none; }
+    .page-foot {
+      display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 56px; padding-top: 18px;
+      border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted);
+    }
+
+    /* light theme: fix places the dark base theme still colours */
+    :root[data-theme="light"] body { background: var(--bg); }
+    :root[data-theme="light"] .sidebar { background: var(--panel); }
+    :root[data-theme="light"] .markdown-section pre { box-shadow: 0 10px 30px -18px rgba(20,24,30,.25); }
+    :root[data-theme="light"] .markdown-section pre > code { color: var(--text); }
+    :root[data-theme="light"] .markdown-section code { color: var(--code-fg); }
+    :root[data-theme="light"] .markdown-section h1 { -webkit-text-fill-color: transparent; }
+    :root[data-theme="light"] .badge.client { color: #0b6fa4; border-color: rgba(11,111,164,.35); background: rgba(11,111,164,.08); }
+    :root[data-theme="light"] .badge.shared { color: #6d4fc2; border-color: rgba(109,79,194,.35); background: rgba(109,79,194,.08); }
+    :root[data-theme="light"] .export-card td:first-child code { color: #8a5a00; background: rgba(165,91,0,.08); border-color: rgba(165,91,0,.2); }
+    :root[data-theme="light"] .copy-name.done, :root[data-theme="light"] #to-top { color: #fff; }
+    :root[data-theme="light"] body::before, :root[data-theme="light"] body::after { opacity: .25; }
+    :root[data-theme="light"] .search .matching-post a { color: var(--text); }
+
     /* right-hand "On this page" */
     #toc { display: none; }
     @media (min-width: 1240px) {
-      .content { padding-right: 252px; }
-      .markdown-section { max-width: 840px; margin-left: auto; margin-right: auto; }
-      body.close .content { padding-right: 252px; }
+      .content { padding-right: 226px; }
+      .markdown-section { max-width: 920px; margin-left: auto; margin-right: auto; }
+      body.close .content { padding-right: 226px; }
       #toc {
-        display: block; position: fixed; top: 44px; right: 28px; width: 216px; max-height: calc(100vh - 88px); overflow-y: auto; z-index: 6;
+        display: block; position: fixed; top: 68px; right: 20px; width: 190px; max-height: calc(100vh - 88px); overflow-y: auto; z-index: 6;
         padding: 2px 0 2px 16px; border-left: 1px solid var(--line); scrollbar-width: none;
         animation: rise .8s .15s var(--ease) both;
       }
@@ -317,8 +602,8 @@
       border: 0; text-decoration: none; transition: color .25s, background .25s, transform .3s var(--ease);
     }
     #toc a:hover { color: var(--head); transform: translateX(2px); }
-    #toc a.t2 { font-weight: 600; color: #aab3bf; }
-    #toc a.t3 { font-weight: 600; font-size: 12px; color: #6b7480; letter-spacing: .2px; margin-top: 6px; }
+    #toc a.t2 { font-weight: 600; color: var(--text-2); }
+    #toc a.t3 { font-weight: 600; font-size: 12px; color: var(--muted); letter-spacing: .2px; margin-top: 6px; }
     #toc a.t4 { font-family: "JetBrains Mono", monospace; font-size: 12px; padding-left: 14px; }
     #toc a.on { color: var(--accent); background: var(--accent-soft); }
     #toc a.on::before {
@@ -329,7 +614,7 @@
     #toc .kids > ul { overflow: hidden; min-height: 0; margin-left: 6px; border-left: 1px solid var(--line); padding-left: 6px; }
     #toc li.open > .kids { grid-template-rows: 1fr; opacity: 1; }
     #toc li.flat > .kids { grid-template-rows: 1fr; opacity: 1; }
-    .markdown-section h2, .markdown-section h3, .export-card { scroll-margin-top: 26px; }
+    .markdown-section h2, .markdown-section h3, .export-card { scroll-margin-top: 118px; }
 
     /* scroll reveal */
     .reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
@@ -339,10 +624,10 @@
     .docsify-pagination-container { border-top: 1px solid var(--line) !important; margin-top: 4em !important; gap: 14px; display: flex; }
     .pagination-item { flex: 1; margin: 0 !important; }
     .pagination-item a {
-      display: block; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.02);
+      display: block; padding: 14px 18px; border: 1px solid var(--line); border-radius: 14px; background: rgba(var(--fx),.02);
       transition: transform .35s var(--ease), border-color .25s, background .25s;
     }
-    .pagination-item a:hover { transform: translateY(-3px); border-color: rgba(184,255,61,.4); background: var(--accent-soft); }
+    .pagination-item a:hover { transform: translateY(-3px); border-color: rgba(var(--ac),.4); background: var(--accent-soft); }
     .pagination-item-label { color: var(--muted); font-size: 12px; }
     .pagination-item-title { color: var(--head); font-family: "Space Grotesk", sans-serif; font-weight: 600; font-size: 1rem; }
 
@@ -350,17 +635,18 @@
     #to-top {
       position: fixed; right: 26px; bottom: 26px; width: 42px; height: 42px; border-radius: 50%; z-index: 30;
       display: grid; place-items: center; cursor: pointer; color: var(--bg); background: var(--accent); border: 0;
-      box-shadow: 0 8px 28px -6px rgba(184,255,61,.55); font-size: 18px; font-weight: 700;
+      box-shadow: 0 8px 28px -6px rgba(var(--ac),.55); font-size: 18px; font-weight: 700;
       opacity: 0; transform: translateY(14px) scale(.8); pointer-events: none; transition: all .4s var(--ease);
     }
     #to-top.show { opacity: 1; transform: none; pointer-events: auto; }
     #to-top:hover { transform: translateY(-3px) scale(1.06); }
 
-    ::selection { background: rgba(184,255,61,.3); color: #fff; }
+    ::selection { background: rgba(var(--ac),.3); color: #fff; }
     ::-webkit-scrollbar { width: 10px; height: 10px; } ::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 10px; }
 
     @media (max-width: 768px) {
-      .markdown-section { padding: 28px 18px 80px; }
+      .markdown-section { padding: 64px 18px 80px; }
+      .theme-wrap { top: 12px; right: 14px; }
       .markdown-section h1 { font-size: 2rem; }
       body.close .sidebar { transform: translateX(var(--sidebar-w)); }
       .content { left: 0; }
@@ -383,6 +669,7 @@
       subMaxLevel: 0,
       auto2top: true,
       relativePath: false,
+      notFoundPage: '404.md',
       search: { placeholder: 'Search the wiki...', noData: 'Nothing found.', depth: 3 },
       copyCode: { buttonText: 'Copy', errorText: 'Error', successText: 'Copied' },
       pagination: { previousText: 'Previous', nextText: 'Next' },
@@ -395,12 +682,302 @@
               .replace(/\[\[([^\]]+)\]\]/g, '[$1]($1)');
           });
 
+          // small copy-to-clipboard button
+          function copyText(text, done) {
+            var legacy = function () { var ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (x) {} ta.remove(); };
+            if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(done, legacy); else legacy();
+          }
+          function copyButton(label, text, title) {
+            var b = document.createElement('button');
+            b.type = 'button'; b.className = 'copy-name'; b.title = title; b.setAttribute('aria-label', title + ': ' + text);
+            b.innerHTML = '<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H11"/></svg><span></span>';
+            b.lastChild.textContent = label;
+            b.addEventListener('click', function (e) {
+              e.preventDefault(); e.stopPropagation();
+              copyText(text, function () { b.classList.add('done'); b.lastChild.textContent = 'Copied'; setTimeout(function () { b.classList.remove('done'); b.lastChild.textContent = label; }, 1300); });
+            });
+            return b;
+          }
+
+          // ---- card extras: description class, key-fact pills, optional tags, coloured types
+          var TYPE_RE = /^(nil|boolean|table|string|number|vector3|vector2|function|any|false|true)(\[\])?\??$/;
+          function typeClass(w) {
+            var b = w.replace(/\[\]|\?/g, '');
+            return b === 'nil' || b === 'false' ? 'nil' : b === 'boolean' || b === 'true' ? 'bool' : b === 'table' ? 'table' : b === 'string' ? 'str'
+                 : b === 'number' ? 'num' : b === 'function' ? 'fn' : b === 'any' ? 'any' : 'vec';
+          }
+          function colourCode(c) {
+            var t = c.textContent.trim(), parts = t.split(/\s*\|\s*/);
+            if (!parts.every(function (p) { return TYPE_RE.test(p); })) return;
+            c.innerHTML = '';
+            parts.forEach(function (p, i) {
+              if (i) { var s = document.createElement('span'); s.className = 'ty-sep'; s.textContent = '|'; c.appendChild(s); }
+              var sp = document.createElement('span'); sp.className = 'ty-' + typeClass(p); sp.textContent = p; c.appendChild(sp);
+            });
+          }
+          function enhanceCard(card) {
+            var first = card.querySelector(':scope > p:not(.returns)'); if (first) first.classList.add('desc');
+            var h4 = card.querySelector(':scope > h4'), grp = h4 && h4.querySelector('.copy-grp');
+            var probe = (first ? first.textContent : '') + ' ' + Array.prototype.map.call(card.querySelectorAll(':scope > blockquote'), function (b) { return b.textContent; }).join(' ');
+            [[/\bblock(s|ing)\b/i, 'blocking', 'blocking', 'Waits for a result: call it from inside a thread'],
+             [/works offline/i, 'offline', 'offline-safe', 'Also works for players that are offline'],
+             [/authori[sz]ed/i, 'authorised', 'authorised', 'Only resources on the trusted list may call it'],
+             [/online players only/i, 'online', 'online only', 'Only works for players that are loaded'],
+             [/^\s*internal\b/i, 'internal', 'internal', 'Internal: you normally never call it']].forEach(function (d) {
+              var hit = d[1] === 'internal'
+                ? Array.prototype.some.call(card.querySelectorAll(':scope > blockquote'), function (b) { return d[0].test(b.textContent.replace(/^\s*internal\s*/i, function (m) { return m; }).replace(/^\s*(note|tip|warning|important|caution)\s*/i, '')); })
+                : d[0].test(probe);
+              if (!hit || !grp) return;
+              var s = document.createElement('span'); s.className = 'pill pill-' + d[1]; s.textContent = d[2]; s.title = d[3]; h4.insertBefore(s, grp);
+            });
+            // optional parameters: "number?" -> "number" + an "optional" tag
+            card.querySelectorAll('table').forEach(function (tb) {
+              var th = tb.querySelector('th'); var isParam = th && /^Parameter/i.test(th.textContent);
+              tb.querySelectorAll('td:nth-child(2) code').forEach(function (c) {
+                var t = c.textContent.trim();
+                if (isParam && /^[\w\[\]]+\?$/.test(t)) {
+                  c.textContent = t.slice(0, -1);
+                  var o = document.createElement('span'); o.className = 'pill pill-opt'; o.textContent = 'optional'; c.parentNode.appendChild(o);
+                }
+                colourCode(c);
+              });
+            });
+            card.querySelectorAll('p.returns .rbody code').forEach(colourCode);
+          }
+
+          // ---- callouts: > [!NOTE|TIP|WARNING|IMPORTANT|CAUTION], plus a keyword fallback
+          var ICONS = {
+            note: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6.2"/><path d="M8 7.2v3.6M8 4.9v.1"/></svg>',
+            tip: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 12.5h4M6.5 14h3M8 1.8a4.2 4.2 0 0 0-2.4 7.6c.5.4.8.9.8 1.5h3.2c0-.6.3-1.1.8-1.5A4.2 4.2 0 0 0 8 1.8z"/></svg>',
+            warning: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2.2 14.3 13H1.7L8 2.2zM8 6.6v3M8 11.3v.1"/></svg>',
+            important: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.8" y="2.2" width="12.4" height="10" rx="2"/><path d="M8 4.9v3M8 9.3v.1M5 14.2l3-2 3 2"/></svg>',
+            caution: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5.2 1.8h5.6l3.4 3.4v5.6l-3.4 3.4H5.2l-3.4-3.4V5.2l3.4-3.4zM8 5.2v3.4M8 10.6v.1"/></svg>'
+          };
+          function buildCallouts() {
+            document.querySelectorAll('.markdown-section blockquote').forEach(function (bq) {
+              if (bq.classList.contains('callout')) return;
+              var type = 'note', p = bq.querySelector('p');
+              if (p) {
+                var m = p.innerHTML.match(/^\s*\[!(NOTE|TIP|WARNING|IMPORTANT|CAUTION)\]\s*(<br\s*\/?>)?\s*/i);
+                if (m) { type = m[1].toLowerCase(); p.innerHTML = p.innerHTML.slice(m[0].length); }
+                else if (/\bblock(s|ing)\b|must run in a thread|any client|\bdo not\b|\bnever\b/i.test(bq.textContent)) type = 'warning';
+              }
+              var head = document.createElement('div'); head.className = 'callout-title';
+              head.innerHTML = ICONS[type] + '<span>' + type + '</span>';
+              bq.insertBefore(head, bq.firstChild); bq.classList.add('callout', 'callout-' + type);
+            });
+          }
+
+          // ---- breadcrumbs
+          function buildCrumbs() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var page = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+            var old = root.querySelector('.crumbs'); if (old) old.remove();
+            if (page === 'Home' || /^Page not found/.test((root.querySelector('h1') || {}).textContent || '')) return;
+            var li = document.querySelector('.sidebar-nav li.active'), group = '';
+            if (li && li.parentElement) { var pv = li.parentElement.previousElementSibling; if (pv && pv.tagName === 'P') group = pv.textContent.trim(); }
+            var nav = document.createElement('nav'); nav.className = 'crumbs'; nav.setAttribute('aria-label', 'Breadcrumb');
+            var title = (root.querySelector('h1') || {}).textContent || page;
+            nav.innerHTML = '<a href="#/">Home</a><i>/</i>' + (group && group !== 'ROTD' ? '<span></span><i>/</i>' : '') + '<b></b>';
+            var sp = nav.querySelector('span'); if (sp) sp.textContent = group.charAt(0) + group.slice(1).toLowerCase();
+            nav.querySelector('b').textContent = title;
+            root.insertBefore(nav, root.firstChild);
+          }
+
+          // ---- page-wide controls: side filter, expand examples, compact mode
+          var filterSide = 'all';
+          function applyFilter() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            root.querySelectorAll('.export-card').forEach(function (c) { c.classList.toggle('card-hidden', filterSide !== 'all' && c.dataset.side !== filterSide); });
+            root.querySelectorAll('table.auto-tbl tr[data-side]').forEach(function (r) { r.classList.toggle('card-hidden', filterSide !== 'all' && r.dataset.side !== filterSide); });
+            var kids = Array.prototype.slice.call(root.children);
+            kids.forEach(function (k) { k.classList.remove('sec-hidden'); });
+            kids.forEach(function (k, i) {
+              if (k.tagName !== 'H2' && k.tagName !== 'H3') return;
+              var stop = k.tagName === 'H2' ? /^H2$/ : /^H[23]$/, range = [], j = i + 1;
+              while (j < kids.length && !stop.test(kids[j].tagName)) { range.push(kids[j]); j++; }
+              var all = range.filter(function (n) { return n.classList.contains('export-card'); });
+              if (all.length && all.every(function (n) { return n.classList.contains('card-hidden'); })) { k.classList.add('sec-hidden'); range.forEach(function (n) { n.classList.add('sec-hidden'); }); }
+            });
+            document.querySelectorAll('.toolbar .chip').forEach(function (c) { c.classList.toggle('on', c.dataset.side === filterSide); });
+            buildToc();
+          }
+          function buildToolbar() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var old = root.querySelector('.toolbar'); if (old) old.remove();
+            filterSide = 'all';
+            var cards = root.querySelectorAll('.export-card'); if (!cards.length) return;
+            var sides = {};
+            cards.forEach(function (c) { var b = c.querySelector(':scope > h4 > .badge'); c.dataset.side = b ? b.textContent : 'any'; sides[c.dataset.side] = (sides[c.dataset.side] || 0) + 1; });
+            var bar = document.createElement('div'); bar.className = 'toolbar'; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Page controls');
+            var keys = ['server', 'client', 'shared'].filter(function (k) { return sides[k]; });
+            if (keys.length > 1) {
+              var mk = function (side, label, n) {
+                var b = document.createElement('button'); b.type = 'button'; b.className = 'chip' + (side === 'all' ? ' on' : ''); b.dataset.side = side;
+                b.innerHTML = '<span></span><em></em>'; b.firstChild.textContent = label; b.lastChild.textContent = n;
+                b.addEventListener('click', function () { filterSide = side; applyFilter(); }); return b;
+              };
+              bar.appendChild(mk('all', 'All', cards.length));
+              keys.forEach(function (k) { bar.appendChild(mk(k, k.charAt(0).toUpperCase() + k.slice(1), sides[k])); });
+            }
+            var sp = document.createElement('span'); sp.className = 'tb-spacer'; bar.appendChild(sp);
+            var hasEx = root.querySelector('.export-card details');
+            if (hasEx) {
+              var ex = document.createElement('button'); ex.type = 'button'; ex.className = 'tb-btn';
+              var expanded = false; try { expanded = localStorage.getItem('rotd-expand') === '1'; } catch (e) {}
+              var setEx = function (on) {
+                expanded = on; ex.textContent = on ? 'Collapse examples' : 'Expand examples'; ex.classList.toggle('on', on);
+                root.querySelectorAll('.export-card details').forEach(function (d) { d.open = on; });
+                try { localStorage.setItem('rotd-expand', on ? '1' : '0'); } catch (e) {}
+              };
+              ex.addEventListener('click', function () { setEx(!expanded); });
+              bar.appendChild(ex); setEx(expanded);
+            }
+            var cp = document.createElement('button'); cp.type = 'button'; cp.className = 'tb-btn';
+            var compact = false; try { compact = localStorage.getItem('rotd-compact') === '1'; } catch (e) {}
+            var setCp = function (on) {
+              compact = on; document.body.classList.toggle('compact', on); cp.textContent = on ? 'Detailed view' : 'Compact view'; cp.classList.toggle('on', on);
+              try { localStorage.setItem('rotd-compact', on ? '1' : '0'); } catch (e) {}
+            };
+            cp.addEventListener('click', function () { setCp(!compact); });
+            bar.appendChild(cp); setCp(compact);
+            var keysHint = document.createElement('span'); keysHint.className = 'tb-keys'; keysHint.innerHTML = '<kbd>j</kbd><kbd>k</kbd> next / prev';
+            bar.appendChild(keysHint);
+            var anchor = root.querySelector(':scope > h2'); root.insertBefore(bar, anchor || cards[0]);
+          }
+
+          // ---- home page: hero buttons + resource cards
+          var homeCounts = {};
+          function isHome() { var p = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home'; return p === 'Home'; }
+          function buildHome() {
+            var root = document.querySelector('.markdown-section'); if (!root || !isHome() || root.querySelector('.hero-cta')) return;
+            var h1 = root.querySelector('h1'); if (!h1) return;
+            var eb = document.createElement('div'); eb.className = 'eyebrow'; eb.textContent = 'Developer docs'; root.insertBefore(eb, h1);
+            var cta = document.createElement('div'); cta.className = 'hero-cta';
+            cta.innerHTML = '<button type="button" class="btn primary" data-find><span>Find an export</span><kbd>Ctrl K</kbd></button><a class="btn" href="#/Getting-Started">Getting started</a><a class="btn" href="#/Common-Mistakes">Common mistakes</a>';
+            cta.querySelector('[data-find]').addEventListener('click', openPalette);
+            var stats = document.createElement('div'); stats.className = 'hero-stats';
+            var after = h1.nextElementSibling || h1; after.parentNode.insertBefore(cta, after.nextSibling); cta.parentNode.insertBefore(stats, cta.nextSibling);
+            var tb = root.querySelector('table'); if (!tb) return;
+            var grid = document.createElement('div'); grid.className = 'res-grid';
+            Array.prototype.forEach.call(tb.querySelectorAll('tbody tr'), function (tr, i) {
+              var a = tr.querySelector('td a'), tds = tr.querySelectorAll('td'); if (!a) return;
+              var card = document.createElement('a'); card.className = 'res-card'; card.href = a.getAttribute('href'); card.style.animationDelay = (i * 40) + 'ms';
+              card.dataset.page = (a.getAttribute('href').match(/^#\/(.+)$/) || [])[1] || '';
+              card.innerHTML = '<h3></h3><p></p><div class="meta"><span></span><span>&rarr;</span></div>';
+              card.querySelector('h3').textContent = a.textContent; card.querySelector('p').textContent = tds[1] ? tds[1].textContent : '';
+              grid.appendChild(card);
+            });
+            tb.parentNode.insertBefore(grid, tb); tb.style.display = 'none';
+            fillHome();
+          }
+          function fillHome() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            root.querySelectorAll('.res-card').forEach(function (c) {
+              var n = homeCounts[c.dataset.page]; c.querySelector('.meta span').textContent = n ? n + ' exports' : (c.dataset.page === 'Getting-Started' ? 'guide' : '');
+            });
+            var st = root.querySelector('.hero-stats'), pages = Object.keys(homeCounts).length, total = 0;
+            Object.keys(homeCounts).forEach(function (k) { total += homeCounts[k]; });
+            if (st && total) st.innerHTML = '<span><b>' + pages + '</b>resources</span><span><b>' + total + '</b>exports</span><span><b>3</b>sides: server, client, shared</span>';
+          }
+          function sidebarCounts() {
+            document.querySelectorAll('.sidebar-nav a').forEach(function (a) {
+              var pg = (a.getAttribute('href') || '').replace(/^#\//, '');
+              if (homeCounts[pg] && !a.querySelector('.cnt')) { var s = document.createElement('span'); s.className = 'cnt'; s.textContent = homeCounts[pg]; a.appendChild(s); }
+            });
+          }
+          function ensureCounts() {
+            return loadPalette().then(function () {
+              homeCounts = {};
+              (pal.items || []).forEach(function (it) { homeCounts[it.page] = (homeCounts[it.page] || 0) + 1; });
+              sidebarCounts(); fillHome();
+            });
+          }
+
+          // jump to an export card (used by the Ctrl+K search)
+          var pendingGoto = null;
+          function gotoCard(name, res) {
+            var cards = Array.prototype.slice.call(document.querySelectorAll('.export-card[data-fn="' + name + '"]'));
+            var card = cards.filter(function (c) { return res && (c.dataset.sec || '').indexOf(res) > -1; })[0] || cards[0];
+            if (!card) return;
+            if (card.classList.contains('card-hidden')) { filterSide = 'all'; applyFilter(); }   // a filter was hiding it
+            if (document.body.classList.contains('compact')) card.classList.add('open');       // compact mode: open the card
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+          }
+
+          // pages without a hand-written Index get one generated from their cards
+          function buildIndex() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var cards = root.querySelectorAll(':scope > .export-card'); if (cards.length < 3) return;
+            var has = Array.prototype.some.call(root.querySelectorAll(':scope > h2'), function (h) { return /^\s*\/?\s*Index/i.test(h.textContent); });
+            if (has) return;
+            var first = root.querySelector(':scope > h2') || cards[0];
+            var h = document.createElement('h2'); h.textContent = 'Index'; h.id = 'auto-index';
+            var tb = document.createElement('table'); tb.className = 'auto-tbl';
+            tb.innerHTML = '<thead><tr><th>Export</th><th>Side</th><th>What it does</th></tr></thead><tbody></tbody>';
+            var body = tb.querySelector('tbody');
+            Array.prototype.forEach.call(cards, function (card) {
+              var name = card.dataset.fn; if (!name) return;
+              var code = card.querySelector(':scope > h4 code'), b = card.querySelector(':scope > h4 > .badge');
+              var d = card.querySelector(':scope > .desc'), rb = !d && card.querySelector(':scope > p.returns .rbody');
+              var txt = d ? d.textContent.trim() : rb ? 'Returns ' + rb.textContent.trim().replace(/:\s*$/, '') : ''; if (txt.length > 115) txt = txt.slice(0, 112).replace(/\s+\S*$/, '') + '...';
+              var tr = document.createElement('tr'); tr.dataset.side = b ? b.textContent : 'any';
+              tr.innerHTML = '<td><code></code></td><td></td><td></td>';
+              tr.firstChild.firstChild.textContent = code ? code.textContent : name;
+              if (b) { var s = document.createElement('span'); s.className = 'badge ' + b.textContent; s.textContent = b.textContent; tr.children[1].appendChild(s); }
+              tr.children[2].textContent = txt;
+              body.appendChild(tr);
+            });
+            root.insertBefore(h, first); root.insertBefore(tb, first);
+          }
+
+          // label every table cell with its column name (used by the phone layout)
+          function labelTables() {
+            document.querySelectorAll('.markdown-section table').forEach(function (tb) {
+              var heads = Array.prototype.map.call(tb.querySelectorAll('thead th'), function (th) { return th.textContent.trim(); });
+              tb.querySelectorAll('tbody tr').forEach(function (tr) {
+                Array.prototype.forEach.call(tr.children, function (td, i) {
+                  if (!heads[i]) return;
+                  td.setAttribute('data-label', heads[i]);
+                  // keep text and inline code in ONE grid item so a sentence is not split into pieces
+                  if (!td.querySelector(':scope > .cell')) {
+                    var cell = document.createElement('div'); cell.className = 'cell';
+                    while (td.firstChild) cell.appendChild(td.firstChild);
+                    td.appendChild(cell);
+                  }
+                });
+              });
+            });
+          }
+
+          // export names in index tables become links to their card (Export-Index links across pages)
+          function linkExportRefs() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var page = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+            root.querySelectorAll(':scope > table td:first-child code').forEach(function (code) {
+              if (code.closest('a')) return;
+              var name = code.textContent.split('(')[0].trim(), res = null, target = page;
+              if (page === 'Export-Index') {
+                var a = code.closest('tr').querySelector('a[href^="#/"]'); if (!a) return;
+                target = a.getAttribute('href').replace(/^#\//, ''); res = a.textContent;
+              } else if (!root.querySelector('.export-card[data-fn="' + name + '"]')) return;
+              var ref = document.createElement('a'); ref.className = 'ref'; ref.href = '#/' + target; ref.title = 'Go to ' + name;
+              code.parentNode.insertBefore(ref, code); ref.appendChild(code);
+              ref.addEventListener('click', function (e) {
+                e.preventDefault();
+                if (target === page) gotoCard(name, res); else { pendingGoto = { name: name, res: res }; location.hash = '#/' + target; }
+              });
+            });
+          }
+
           // turn every "#### `Name(args)`" block into an export card
           function buildCards() {
             var root = document.querySelector('.markdown-section');
             if (!root) return;
-            var kids = Array.prototype.slice.call(root.children), side = '';
+            var kids = Array.prototype.slice.call(root.children), side = '', sec = '';
             kids.forEach(function (el, i) {
+              if (el.tagName === 'H2') sec = el.textContent.trim();
               if (el.tagName === 'H2' || el.tagName === 'H3') {
                 var t = el.textContent.toLowerCase();
                 var s = t.indexOf('shared') > -1 || (t.indexOf('client') > -1 && t.indexOf('server') > -1) ? 'shared'
@@ -422,16 +999,19 @@
                 code.lastChild.textContent = txt.slice(k);
                 if (side) { var b = document.createElement('span'); b.className = 'badge ' + side; b.textContent = side; el.insertBefore(b, el.firstChild); }
                 var fname = txt.slice(0, k).trim();
-                var cb = document.createElement('button');
-                cb.type = 'button'; cb.className = 'copy-name'; cb.title = 'Copy export name'; cb.setAttribute('aria-label', 'Copy ' + fname);
-                cb.innerHTML = '<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="8" height="8" rx="1.5"/><path d="M3 10.5V4a1.5 1.5 0 0 1 1.5-1.5H11"/></svg><span>Copy</span>';
-                cb.addEventListener('click', function (e) {
-                  e.preventDefault(); e.stopPropagation();
-                  var done = function () { cb.classList.add('done'); cb.lastChild.textContent = 'Copied'; setTimeout(function () { cb.classList.remove('done'); cb.lastChild.textContent = 'Copy'; }, 1300); };
-                  var legacy = function () { var ta = document.createElement('textarea'); ta.value = fname; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (x) {} ta.remove(); };
-                  if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(fname).then(done, legacy); else legacy();
-                });
-                el.appendChild(cb);
+                card.dataset.fn = fname; card.dataset.sec = sec;
+                // "Call" copies exports.<resource>:Name(args); Bridge.* functions copy as written
+                var page = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+                var resName = page === 'Small-Exports' ? sec : page;
+                var call = fname.indexOf('.') > -1 ? txt
+                         : (/-/.test(resName) ? "exports['" + resName + "']:" : 'exports.' + resName + ':') + txt;
+                var grp = document.createElement('span'); grp.className = 'copy-grp';
+                grp.appendChild(copyButton('Name', fname, 'Copy export name'));
+                grp.appendChild(copyButton('Call', call, 'Copy the full call'));
+                var anc = el.querySelector('a.anchor');
+                var link = location.href.split('#')[0] + (anc ? anc.getAttribute('href') : '#/' + page);
+                grp.appendChild(copyButton('Link', link, 'Copy a direct link to this export'));
+                el.appendChild(grp);
               }
               card.querySelectorAll(':scope > p').forEach(function (p) {
                 var f = p.firstElementChild;
@@ -439,8 +1019,16 @@
                   p.classList.add('returns');
                   var body = document.createElement('div'); body.className = 'rbody';
                   while (f.nextSibling) body.appendChild(f.nextSibling);
+                  var lastNode = body.lastChild;   // a lone ":" before a field table looks broken
+                  if (lastNode && lastNode.nodeType === 3 && /^\s*:\s*$/.test(lastNode.textContent)) lastNode.textContent = '';
                   p.appendChild(body);
                 }
+              });
+              enhanceCard(card);
+              // compact mode: click the header to open / close the card
+              el.addEventListener('click', function (e) {
+                if (!document.body.classList.contains('compact') || e.target.closest('button, a')) return;
+                card.classList.toggle('open');
               });
             });
             // flash the card that matches a deep link
@@ -454,9 +1042,11 @@
             var old = document.getElementById('toc'); if (old) old.remove();
             tocItems = [];
             var root = document.querySelector('.markdown-section'); if (!root) return;
-            var heads = root.querySelectorAll(':scope > h2, :scope > h3, .export-card > h4');
+            var heads = Array.prototype.filter.call(root.querySelectorAll(':scope > h2, :scope > h3, .export-card > h4'), function (h) {
+              return !h.closest('.card-hidden') && !h.classList.contains('sec-hidden');
+            });
             if (heads.length < 2) return;
-            var nav = document.createElement('nav'); nav.id = 'toc';
+            var nav = document.createElement('nav'); nav.id = 'toc'; nav.setAttribute('aria-label', 'On this page');
             nav.innerHTML = '<div class="toc-title">On this page</div><ul></ul>';
             var top = nav.querySelector('ul'), group = null, kids = null;
             function link(el, cls, label) {
@@ -504,10 +1094,127 @@
             requestAnimationFrame(function () { tocTick = false; updateToc(); });
           }, { passive: true });
 
+          // footer: last updated + edit link
+          var verInfo = null;
+          function pageFooter() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var page = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+            var old = root.querySelector('.page-foot'); if (old) old.remove();
+            var f = document.createElement('div'); f.className = 'page-foot';
+            if (/^#\/?(\?|$)/.test(location.hash) === false && root.querySelector('h1') && /^Page not found/.test(root.querySelector('h1').textContent)) return;
+            var edit = '<a href="https://github.com/LySoon/rotd_tebexwiki/edit/main/' + page + '.md" target="_blank" rel="noopener">Edit this page &#8599;</a>';
+            var render = function () { f.innerHTML = (verInfo && verInfo.updated ? '<span>Last updated ' + verInfo.updated + '</span>' : '') + edit; };
+            render(); root.appendChild(f);
+            if (!verInfo) fetch('version.json').then(function (r) { return r.json(); }).then(function (j) { verInfo = j; render(); }).catch(function () {});
+          }
+
+          // Ctrl+K search over every export
+          var pal = { items: null, res: [], sel: 0 };
+          function buildPalette() {
+            var wrap = document.createElement('div');
+            wrap.id = 'palette'; wrap.setAttribute('role', 'dialog'); wrap.setAttribute('aria-modal', 'true'); wrap.setAttribute('aria-label', 'Find an export');
+            wrap.innerHTML = '<div class="pal-box"><input type="text" placeholder="Find an export, e.g. GetSquad..." autocomplete="off" spellcheck="false" aria-label="Find an export"><ul></ul><div class="pal-foot"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></div></div>';
+            document.body.appendChild(wrap);
+            pal.el = wrap; pal.input = wrap.querySelector('input'); pal.list = wrap.querySelector('ul');
+            wrap.addEventListener('mousedown', function (e) { if (e.target === wrap) closePalette(); });
+            pal.input.addEventListener('input', function () { pal.sel = 0; renderPalette(); });
+            pal.input.addEventListener('keydown', function (e) {
+              if (e.key === 'ArrowDown') { e.preventDefault(); movePal(1); }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); movePal(-1); }
+              else if (e.key === 'Enter') { e.preventDefault(); if (pal.res[pal.sel]) pickPalette(pal.res[pal.sel]); }
+              else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
+            });
+          }
+          function loadPalette() {
+            if (pal.items) return Promise.resolve();
+            return fetch('Export-Index.md').then(function (r) { return r.text(); }).then(function (t) {
+              pal.items = [];
+              t.split('\n').forEach(function (l) {
+                var m = l.match(/^\| `([^`]+)` \| (\w+) \| \[([^\]]+)\]\(([^)]+)\) \| (.*) \|\s*$/);
+                if (m) pal.items.push({ sig: m[1], name: m[1].split('(')[0].trim(), side: m[2], res: m[3], page: m[4], desc: m[5] });
+              });
+            }).catch(function () { pal.items = []; });
+          }
+          function openPalette() {
+            if (!pal.el) buildPalette();
+            pal.prev = document.activeElement;
+            pal.el.classList.add('open'); pal.input.value = ''; pal.sel = 0;
+            loadPalette().then(renderPalette); renderPalette(); pal.input.focus();
+          }
+          function closePalette() {
+            if (!pal.el) return; pal.el.classList.remove('open');
+            if (pal.prev && pal.prev.focus && document.body.contains(pal.prev)) pal.prev.focus();
+          }
+          function movePal(d) {
+            if (!pal.res.length) return;
+            pal.sel = (pal.sel + d + pal.res.length) % pal.res.length;
+            Array.prototype.forEach.call(pal.list.children, function (li, i) { li.classList.toggle('on', i === pal.sel); });
+            var cur = pal.list.children[pal.sel]; if (cur) cur.scrollIntoView({ block: 'nearest' });
+          }
+          function renderPalette() {
+            var q = pal.input.value.trim().toLowerCase(), items = pal.items || [];
+            var terms = q.split(/\s+/).filter(Boolean), out = [];
+            items.forEach(function (it) {
+              var n = it.name.toLowerCase(), hay = n + ' ' + it.res.toLowerCase() + ' ' + it.side + ' ' + it.desc.toLowerCase();
+              if (!terms.every(function (t) { return hay.indexOf(t) > -1; })) return;
+              var rank = !terms.length ? 3 : n === q ? 0 : n.indexOf(terms[0]) === 0 ? 1 : n.indexOf(terms[0]) > -1 ? 2 : 3;
+              out.push({ it: it, rank: rank });
+            });
+            out.sort(function (a, b) { return a.rank - b.rank || a.it.name.localeCompare(b.it.name); });
+            pal.res = out.slice(0, 40).map(function (o) { return o.it; });
+            pal.list.innerHTML = '';
+            if (!items.length) { pal.list.innerHTML = '<li class="pal-empty">Loading the export list...</li>'; return; }
+            if (!pal.res.length) { pal.list.innerHTML = '<li class="pal-empty">No export matches "' + q.replace(/[<>&]/g, '') + '"</li>'; return; }
+            pal.res.forEach(function (it, i) {
+              var li = document.createElement('li'); if (i === pal.sel) li.className = 'on';
+              var b = document.createElement('span'); b.className = 'badge ' + (it.side === 'any' ? 'shared' : it.side); b.textContent = it.side;
+              var nm = document.createElement('span'); nm.className = 'pal-name'; nm.textContent = it.sig;
+              var rs = document.createElement('span'); rs.className = 'pal-res'; rs.textContent = it.res;
+              var ds = document.createElement('span'); ds.className = 'pal-desc'; ds.textContent = it.desc;
+              li.appendChild(b); li.appendChild(nm); li.appendChild(rs); li.appendChild(ds);
+              li.addEventListener('mousemove', function () { pal.sel = i; Array.prototype.forEach.call(pal.list.children, function (x, j) { x.classList.toggle('on', j === i); }); });
+              li.addEventListener('click', function () { pickPalette(it); });
+              pal.list.appendChild(li);
+            });
+          }
+          function pickPalette(it) {
+            closePalette();
+            var cur = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+            if (cur === it.page) gotoCard(it.name, it.res);
+            else { pendingGoto = { name: it.name, res: it.res }; location.hash = '#/' + it.page; }
+          }
+
+          // light / dark theme
+          function applyTheme(t) {
+            document.documentElement.dataset.theme = t;
+            try { localStorage.setItem('rotd-theme', t); } catch (e) {}
+            var m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = t === 'light' ? '#f5f6f2' : '#0a0c0f';
+          }
+
           var io;
           hook.doneEach(function () {
             buildCards();
+            buildIndex();
+            linkExportRefs();
+            labelTables();
+            buildCallouts();
+            buildCrumbs();
+            buildToolbar();
             buildToc();
+            buildHome();
+            sidebarCounts(); ensureCounts();
+            pageFooter();
+            if (pendingGoto) {
+              var pg = pendingGoto; pendingGoto = null;
+              // the router scrolls to the top after rendering, so scroll again until the card is really in view
+              var tries = 0, go = function () {
+                gotoCard(pg.name, pg.res);
+                var cards = document.querySelectorAll('.export-card[data-fn="' + pg.name + '"]');
+                var c = cards[0]; if (!c) return;
+                setTimeout(function () { var t = c.getBoundingClientRect().top; if ((t < 0 || t > 400) && ++tries < 4) go(); }, 700);
+              };
+              setTimeout(go, 400);
+            }
             // scroll reveal for heavy blocks
             if (io) io.disconnect();
             io = new IntersectionObserver(function (entries) {
@@ -520,16 +1227,58 @@
           hook.mounted(function () {
             var foot = document.createElement('div');
             foot.className = 'sidebar-foot';
-            foot.innerHTML = '<a href="https://github.com/LySoon/rotd_tebexwiki" target="_blank" rel="noopener">View on GitHub &#8599;</a>';
+            foot.innerHTML = '<a href="https://github.com/LySoon/rotd_tebexwiki" target="_blank" rel="noopener">View on GitHub &#8599;</a>'
+;
+            var tt = document.createElement('div'); tt.className = 'theme-wrap';
+            tt.innerHTML = '<button type="button" class="theme-toggle" aria-label="Toggle light and dark theme" title="Toggle light / dark theme"><svg class="i-sun" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg><svg class="i-moon" viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13.5 9.6A5.8 5.8 0 0 1 6.4 2.5a5.8 5.8 0 1 0 7.1 7.1z"/></svg><span class="theme-label"></span></button>';
+            document.body.appendChild(tt);
             var sb = document.querySelector('.sidebar'); if (sb) sb.appendChild(foot);
+            var tb = tt.querySelector('.theme-toggle'), tl = tt.querySelector('.theme-label');
+            var sync = function () { tl.textContent = document.documentElement.dataset.theme === 'light' ? 'Dark' : 'Light'; };
+            sync();
+            tb.addEventListener('click', function () {
+              applyTheme(document.documentElement.dataset.theme === 'light' ? 'dark' : 'light'); sync();
+            });
 
             var kbd = document.createElement('kbd'); kbd.textContent = '/';
             var s = document.querySelector('.sidebar .search'); if (s) s.appendChild(kbd);
+            var fb = document.createElement('button'); fb.type = 'button'; fb.className = 'find-export';
+            fb.innerHTML = '<span>Find an export</span><kbd>Ctrl K</kbd>';
+            fb.addEventListener('click', openPalette);
+            if (s && s.parentNode) s.parentNode.insertBefore(fb, s.nextSibling);
             document.addEventListener('keydown', function (e) {
               var t = e.target.tagName;
-              if ((e.key === '/' || (e.key === 'k' && (e.ctrlKey || e.metaKey))) && t !== 'INPUT' && t !== 'TEXTAREA') {
+              if (e.key === 'k' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); if (pal.el && pal.el.classList.contains('open')) closePalette(); else openPalette(); return; }
+              if (e.key === '/' && t !== 'INPUT' && t !== 'TEXTAREA') {
                 e.preventDefault(); var i = document.querySelector('.search input'); if (i) i.focus();
               }
+              // j / k: next / previous export card
+              if ((e.key === 'j' || e.key === 'k') && !e.ctrlKey && !e.metaKey && !e.altKey && t !== 'INPUT' && t !== 'TEXTAREA' && t !== 'SELECT'
+                  && !(pal.el && pal.el.classList.contains('open'))) {
+                var cards = Array.prototype.filter.call(document.querySelectorAll('.export-card'), function (c) { return c.offsetParent !== null; });
+                if (!cards.length) return;
+                var target = null;
+                if (e.key === 'j') target = cards.filter(function (c) { return c.getBoundingClientRect().top > 90; })[0];
+                else target = cards.filter(function (c) { return c.getBoundingClientRect().top < 20; }).pop();
+                if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); target.classList.remove('flash'); void target.offsetWidth; target.classList.add('flash'); }
+              }
+            });
+
+            // skip link
+            var sk = document.createElement('a'); sk.className = 'skip'; sk.href = '#'; sk.textContent = 'Skip to content';
+            sk.addEventListener('click', function (e) { e.preventDefault(); var m = document.querySelector('.markdown-section'); if (m) { m.setAttribute('tabindex', '-1'); m.focus(); } });
+            document.body.insertBefore(sk, document.body.firstChild);
+
+            // print: open every example first, then put things back
+            var wasOpen = [];
+            window.addEventListener('beforeprint', function () {
+              wasOpen = [];
+              document.querySelectorAll('.markdown-section details').forEach(function (d) { wasOpen.push(d.open); d.open = true; });
+              document.querySelectorAll('.export-card').forEach(function (c) { c.classList.add('open'); });
+            });
+            window.addEventListener('afterprint', function () {
+              document.querySelectorAll('.markdown-section details').forEach(function (d, i) { d.open = !!wasOpen[i]; });
+              document.querySelectorAll('.export-card').forEach(function (c) { c.classList.remove('open'); });
             });
 
             var bar = document.getElementById('read-progress'), top = document.getElementById('to-top');
@@ -544,12 +1293,12 @@
       ]
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-lua.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/docsify.min.js" integrity="sha384-KaHhgnx/OTLoJ4J33SSJsF4x1pk4I7q3s5ZOfIDHJYl6IG7Oyn2vNDsHiWJe46fD" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify@4.13.1/lib/plugins/search.min.js" integrity="sha384-LthJPBJ4RGco78kBY+EmKz5rmISZ5vrtAu3+l2ALQ2mrZHOe6Wyf6knyKjeC4cL6" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-copy-code@2.1.1/dist/docsify-copy-code.min.js" integrity="sha384-t4d9b4/0dEBkoJ5e77XEPBrqJ790jbFQFmEaTbBqIlTDeGosM1AbZvC1NQwqTg+5" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docsify-pagination@2.10.1/dist/docsify-pagination.min.js" integrity="sha384-uFEp18/1vv2dYlO64J2lOcnbhirAQZPtruqAZZ7PZYoXenm5c+tIs3AqSMjVMRe8" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-lua.min.js" integrity="sha384-qnsmaXmSxuN1DguKvNsGsQFG1LyCwf1UaKmFgeac2/ssP3m7kDxtKmWTmOIkuOtE" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-json.min.js" integrity="sha384-RhrmFFMb0ZCHImjFMpR/UE3VEtIVTCtNrtKQqXCzqXZNJala02N3UbVhi+qzw3CY" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.30.0/components/prism-bash.min.js" integrity="sha384-9WmlN8ABpoFSSHvBGGjhvB3E/D8UkNB9HpLJjBQFC2VSQsM1odiQDv4NbEo+7l15" crossorigin="anonymous"></script>
 </body>
 </html>

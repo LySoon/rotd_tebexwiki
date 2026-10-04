@@ -4,6 +4,7 @@ Discoverable map blips and POIs. Its exports give **positions where building sho
 
 Each point is a flat table `{ x, y, z, id, name, radius }`, see Data shapes below.
 
+> [!TIP]
 > To ask "can I build here?", use `rotd_zones:CanBuildAtCoords` instead, see [[rotd_zones]].
 
 ## Client exports

@@ -1,4 +1,4 @@
-﻿**ROTD**
+**ROTD**
 
 * [Home](Home)
 * [Getting-Started](Getting-Started)
@@ -20,3 +20,7 @@
 * [vehicle_spawner](vehicle_spawner)
 * [Small-Exports](Small-Exports)
 
+**Reference**
+* [Export-Index](Export-Index)
+* [Common-Mistakes](Common-Mistakes)
+* [Changelog](Changelog)

@@ -1,0 +1,23 @@
+# ROTD Developer Wiki
+
+> Exports, events and APIs of the ROTD FiveM resources, with parameters, return values and examples. Full text of every page in one file: https://lysoon.github.io/rotd_tebexwiki/llms-full.txt
+
+## Pages
+
+- [Changelog](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/Changelog.md): What changed in the exports and in these docs. Newest first. Add a line here whenever an export is added, renamed, changed or removed, so developers can see it.
+- [Common-Mistakes](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/Common-Mistakes.md): The errors that come up most when calling ROTD exports. Each one shows the wrong way, the right way and why.
+- [Getting-Started](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/Getting-Started.md): local zone = exports.rotd_zones:GetZoneAtCoords(vector3(215.0, -810.0, 30.0))
+- [Home](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/Home.md): Documentation for the exports, events and APIs of the ROTD resources, with examples.
+- [npc_guide](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/npc_guide.md): Quest NPCs, quest progress, and the currency exchange market.
+- [rotd_blips](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_blips.md): Discoverable map blips and POIs. Its exports give positions where building should be blocked; rotd_zones uses them for its no-build gate. Called from the client (the config is shared, so server use also works).
+- [rotd_bridge](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_bridge.md): The shared layer between ROTD resources and your framework, inventory and optional partner resources. A resource never calls QBCore, ox_inventory and so on directly: it asks the bridge.
+- [rotd_classystem](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_classystem.md): Classes, skills, XP and modifiers. Modifiers are multipliers (1.0 = normal) such as meleeDamage. Skills carry effects with numeric or boolean values.
+- [rotd_leaderboard](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_leaderboard.md): Read-only stat lookups from the player_stats table. All exports are server side and take a cid (character id, string). Unknown players return 0.
+- [rotd_loots](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_loots.md): Searchable loot props and containers, plus the "loot sense" scan.
+- [rotd_recyclers](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_recyclers.md): Scrapping stations. The only exports are notification helpers (client side).
+- [rotd_scavs](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_scavs.md): AI scavenger squads that loot corpses and stashes. Two server exports let other systems change what a scav carries. A scav is identified by its network id (netId, number).
+- [rotd_squad](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_squad.md): Squads, reputation, per-player stats and squad building access.
+- [rotd_zones](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd_zones.md): Zones, radiation, resistance, infection hooks and zombie names. Call exports with exports.rotd_zones:Name(...) (or exports['rotd_zones']:Name(...)).
+- [rotd-minigame](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/rotd-minigame.md): Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire splice and more. Client side only.
+- [Small-Exports](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/Small-Exports.md): Lists the vehicles the event system currently owns. Used by vehicle_spawner so its cleanup sweep leaves them alone.
+- [vehicle_spawner](https://raw.githubusercontent.com/LySoon/rotd_tebexwiki/main/vehicle_spawner.md): World vehicles, damage and parts. Exports for event scripts, garages and zombie systems.

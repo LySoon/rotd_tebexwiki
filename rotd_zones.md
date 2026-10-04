@@ -2,6 +2,7 @@
 
 Zones, radiation, resistance, infection hooks and zombie names. Call exports with `exports.rotd_zones:Name(...)` (or `exports['rotd_zones']:Name(...)`).
 
+> [!NOTE]
 > **Side.** The badge on each export tells you where to call it: **client** from a client script, **server** from a server script, **shared** from either.
 > `rotd_zones` depends on no zombie, medical, HUD or sound resource. Anything that needs outside data (zombie names, infection state, cure, cough reactions) is a **registration export** further down.
 
@@ -456,6 +457,7 @@ print(d.maxhealth, d.maxstamina)
 
 #### `RadiationZone(inside, zonedata)`
 
+> [!NOTE]
 > **Internal.** Starts or stops the zone dose loop. The zone detection calls it, you normally never do.
 
 | Parameter | Type | Description |
@@ -623,6 +625,7 @@ end)
 
 </details>
 
+> [!TIP]
 > Register again in the client event `rotd_zones:ready` so a restart of `rotd_zones` does not lose the registration.
 
 #### `SetInfectionState(state)`
@@ -851,6 +854,7 @@ end)
 AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
 ```
 
+> [!CAUTION]
 > **Compatibility note.** The net event `rotd_zones:setradiation` (server) from older versions still exists and lets any client set another player's radiation. Prefer the server exports above; the event is kept only for compatibility.
 
 ## Commands

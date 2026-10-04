@@ -2,6 +2,7 @@
 
 Read-only stat lookups from the `player_stats` table. All exports are **server side** and take a **cid** (character id, `string`). Unknown players return `0`.
 
+> [!NOTE]
 > Stats are written by the resource's own events (`rotd_leaderboard:updateZombieKill` and similar). Other resources should not write them directly.
 
 ## Server exports

@@ -2,6 +2,7 @@
 
 Scrapping stations. The only exports are notification helpers (**client side**).
 
+> [!NOTE]
 > The resource currently registers `ShowNotification` in two files (`client/client.lua` routes it to the ROTD HUD, `client/notifications.lua` uses `lib.notify`). The one loaded last answers. This will be unified during the multi-framework conversion.
 
 ## Client exports

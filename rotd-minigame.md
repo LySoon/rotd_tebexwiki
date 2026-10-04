@@ -12,6 +12,7 @@ Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire sp
 
 Blocks the calling thread until the minigame ends.
 
+> [!WARNING]
 > **Must run in a thread** (`CreateThread`, a command handler, an event handler), never at the top level of a file.
 
 | Parameter | Type | Description |

@@ -2,6 +2,7 @@
 
 Squads, reputation, per-player stats and squad building access.
 
+> [!NOTE]
 > **Identifiers.** Some exports take a **server id** (`src`, a `number`), others a **character id** (`cid`, a `string`). The parameter table of every export says which one it wants.
 
 ## Server exports
@@ -521,6 +522,7 @@ end
 
 Asks the server whether the local player's squad has access to a building.
 
+> [!WARNING]
 > **Blocking.** Call it from a thread, never from the main frame.
 
 | Parameter | Type | Description |

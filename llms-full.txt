@@ -1,0 +1,4612 @@
+# ROTD Developer Wiki (full text)
+
+Rules for writing code against these docs:
+- Only call exports that are listed here. Never invent an export, parameter or return value. If something is missing, say so.
+- Call exports as exports.<resource>:<Name>(...). A resource with a dash needs the bracket form: exports['rotd-minigame']:startMinigameSync(...).
+- Respect the side of every export: SERVER exports only in server scripts, CLIENT exports only in client scripts, SHARED on both.
+- src is a server id (number). cid is a character id (string). The parameter table says which one an export takes.
+- Read the Returns line: handle nil / false. Exports marked blocking must run inside CreateThread.
+- Exports marked "authorised" only work from resources listed in the trusted resources config.
+
+
+<!-- page: Changelog | https://lysoon.github.io/rotd_tebexwiki/#/Changelog -->
+# Changelog
+
+What changed in the exports and in these docs. Newest first. Add a line here whenever an export is added, renamed, changed or removed, so developers can see it.
+
+## 2026-10
+
+### Docs
+
+- Every export now has its own card with parameters, return values and an example.
+- Added data shapes (the exact fields of returned tables) and recipes to the resource pages.
+- Added [[Export-Index]] and [[Common-Mistakes]].
+
+### Known behaviour to be aware of
+
+- `rotd_classystem`: `AddExperience` and `AddExperienceToClass` always return `false`. Class levels follow the HUD level (`SyncHudLevel`).
+- `rotd_recyclers`: `ShowNotification` is registered in two files and the one loaded last answers. This will be unified during the multi-framework conversion.
+- `rotd_zones`: the net event `rotd_zones:setradiation` from older versions is kept only for compatibility. Prefer `SetPlayerRadiation` / `AddPlayerRadiation`.
+- Resources not yet converted to `rotd_bridge` may change their internals during the multi-framework conversion. Export signatures stay the same.
+
+## How to add an entry
+
+```text
+## YYYY-MM
+
+### rotd_zones
+- Added `ExportName(args)`: what it does.
+- Changed `ExportName`: what is different.
+- Removed `ExportName`: use `OtherExport` instead.
+```
+
+<!-- page: Common-Mistakes | https://lysoon.github.io/rotd_tebexwiki/#/Common-Mistakes -->
+# Common mistakes
+
+The errors that come up most when calling ROTD exports. Each one shows the wrong way, the right way and why.
+
+## Calling the wrong side
+
+Every export is **server**, **client** or **shared**. A client export called from a server script (or the other way round) does not exist there and errors or returns `nil`.
+
+```lua
+-- WRONG: IsInSquad() with no argument is the CLIENT export
+-- server script
+if exports.rotd_squad:IsInSquad() then end
+
+-- RIGHT: the server version takes a cid
+if exports.rotd_squad:IsInSquad(cid) then end
+```
+
+Check the badge on the export card before you copy it.
+
+## Mixing up `src` and `cid`
+
+`src` is a **server id** (`number`). `cid` is a **character id** (`string`). Passing the wrong one returns `nil`, `0` or `false` without an error.
+
+```lua
+-- WRONG
+local rep = exports.rotd_squad:GetPlayerReputation(src)
+
+-- RIGHT: this export wants a cid
+local cid = Bridge.Framework.GetIdentifier(src)
+local rep = exports.rotd_squad:GetPlayerReputation(cid)
+```
+
+Some exports accept both, for example `GetSquadStats(srcOrCid)`. The parameter table says so.
+
+## Blocking exports outside a thread
+
+`startMinigameSync` and `CheckBuildingAccess` **wait** for a result. They must run inside a thread, an event handler or a command handler, never at the top level of a file.
+
+```lua
+-- WRONG: top level of a client file
+local ok = exports['rotd-minigame']:startMinigameSync('lockpick', 4, 30)
+
+-- RIGHT
+CreateThread(function()
+    local ok = exports['rotd-minigame']:startMinigameSync('lockpick', 4, 30)
+end)
+```
+
+If you do not want a thread, use the callback version `startMinigame(...)`.
+
+## Not handling `nil`
+
+Many exports return `nil` when there is nothing to return. The **Returns** row on every card says when.
+
+```lua
+-- WRONG: errors when the player has no squad
+local leader = exports.rotd_squad:GetSquadLeaderCid(src)
+print(leader:upper())
+
+-- RIGHT
+local leader = exports.rotd_squad:GetSquadLeaderCid(src)
+if leader then print(leader) end
+```
+
+## Using an online-only export for an offline player
+
+`GetSquadByCid` only works while the squad is loaded (**online players only**). For an offline owner use the exports marked **Works offline**.
+
+```lua
+-- WRONG: offline base owner, returns nil
+local squad = exports.rotd_squad:GetSquadByCid(ownerCid)
+
+-- RIGHT
+local squadId = exports.rotd_squad:GetSquadIdForCid(ownerCid)
+local mates   = exports.rotd_squad:AreCitizenIdsSquadMates(ownerCid, builderCid)
+```
+
+## Registration lost after a restart
+
+Registration exports (`RegisterInfectionDetector`, `RegisterZombieLabels`, `RegisterCoughHandler`, ...) are stored in memory. If `rotd_zones` restarts, your registration is gone. Register again in the ready event:
+
+```lua
+local function register()
+    exports.rotd_zones:RegisterZombieLabels({ normal = 'Walker' })
+end
+
+register()
+AddEventHandler('rotd_zones:ready', register)   -- runs again after a restart
+```
+
+## A resource name with a dash
+
+`exports.rotd-minigame` is read by Lua as `exports.rotd - minigame`. Use the bracket form:
+
+```lua
+-- WRONG
+exports.rotd-minigame:startMinigameSync('lockpick', 4)
+
+-- RIGHT
+exports['rotd-minigame']:startMinigameSync('lockpick', 4)
+```
+
+## Calling an authorised export from an untrusted resource
+
+`SyncHudLevel`, `AddExperience*`, `AddBonusSkillPoints`, `AwardActionExperience` and `ActivatePlayerSkill` only work when **your** resource is listed in `Config.TrustedServerResources` of `rotd_classystem`. Otherwise they return `false` and the server logs `UNAUTHORIZED_RESOURCE_CALL`.
+
+## `SetRadiation` instead of `AddRadiation`
+
+`SetRadiation` **overwrites** the dose. For damage from a source (a grenade, a bite) use `AddRadiation`: it adds a delta and applies clothing resistance.
+
+```lua
+-- WRONG: wipes the dose the player already had
+exports.rotd_zones:SetRadiation(25.0)
+
+-- RIGHT
+exports.rotd_zones:AddRadiation(25.0)
+```
+
+## Trusting `GetPlayerRadiation` as live data
+
+`GetPlayerRadiation(src)` (server) is the **last saved** dose. It is saved every few minutes, on logout and on resource stop, so it can lag behind. The live value is on the client: `GetSufferedRadiation()`.
+
+## The old radiation net event
+
+The net event `rotd_zones:setradiation` from older versions still exists and lets **any client** set another player's radiation. Do not trigger it. Use `SetPlayerRadiation` / `AddPlayerRadiation` from server code.
+
+## Handle or network id
+
+Vehicle and scav exports differ in what they take:
+
+| Export | Takes |
+|---|---|
+| `ProtectVehicle` | entity handle **or** network id |
+| `PersistVehicleParts`, `RestoreVehiclePartsFull`, `zombieAttackedVehicle` | network id |
+| `GiveToScav`, `SwapScavWeapon` | network id of the scav |
+
+```lua
+local netId = NetworkGetNetworkIdFromEntity(vehicle)
+exports.vehicle_spawner:PersistVehicleParts(netId, plate)
+```
+
+## Start order
+
+`rotd_bridge` must start **after** your framework, inventory and `ox_lib`, and **before** the ROTD resources.
+
+```cfg
+ensure ox_lib
+ensure qb-core          # or your framework
+ensure core_inventory   # or your inventory
+ensure rotd_bridge
+ensure rotd_zones
+```
+
+<!-- page: Getting-Started | https://lysoon.github.io/rotd_tebexwiki/#/Getting-Started -->
+# Getting started
+
+## Calling an export
+
+```lua
+-- both forms are the same
+local zone = exports.rotd_zones:GetZoneAtCoords(vector3(215.0, -810.0, 30.0))
+local zone = exports['rotd_zones']:GetZoneAtCoords(vector3(215.0, -810.0, 30.0))
+```
+
+- **Client** exports are called from client scripts, **server** exports from server scripts. Every page marks the side.
+- Exports that need an outside resource to be running fail quietly (return `nil` / `false`) when it is not. Check `GetResourceState('rotd_zones') == 'started'` first if you must be sure.
+- Tables returned by exports are copies unless the page says otherwise.
+
+## Player identifiers
+
+| Name | Meaning |
+|---|---|
+| `src` | server id of a player (number), server side only |
+| `cid` | the character identifier (`citizenid` on QB/Qbox, `identifier` on ESX) |
+| `serverId` | server id as seen from a client |
+
+Each page says which one an export expects. Some resources accept both.
+
+## Hooks that other resources provide (registration exports)
+
+ROTD resources never depend on resources that are not shipped with the pack. When they need outside data they expose a **registration export** instead. Examples:
+
+| You are | You call | Page |
+|---|---|---|
+| a zombie resource | `exports.rotd_zones:RegisterZombieLabels(map)` | [[rotd_zones]] |
+| a disease / medical resource | `RegisterInfectionDetector`, `RegisterInfectionCure` | [[rotd_zones]] |
+| anything reacting to coughs | `RegisterCoughHandler` | [[rotd_zones]] |
+
+Register again inside the client event `rotd_zones:ready` (and the equivalent ready events) so a restart of the ROTD resource does not lose your registration.
+
+## Optional cooperation between ROTD resources
+
+When a ROTD resource can cooperate with another one that may not be running, it uses `Bridge.Optional`. If the partner is missing, that feature turns off and one console line tells the owner which resource to start. See [[rotd_bridge]].
+
+## Examples in this wiki
+
+Examples are meant to be pasted into your own resource. They use plain Lua, no framework calls, unless the page says otherwise.
+
+## A complete example
+
+A resource that gives every player a bandage quest progress and radiation resistance bonus when they use a bandage item. Everything below is real, documented API.
+
+```lua
+-- server.lua
+RegisterNetEvent('mybandage:server:used', function()
+    local src = source
+
+    -- count it for quests listening for 'bandage_used'
+    if exports.npc_guide:TracksEvent(src, 'bandage_used') then
+        exports.npc_guide:TrackEvent(src, 'bandage_used', 1)
+    end
+
+    -- credit the stat
+    exports.rotd_squad:AddHealedPlayer(src, 1)
+    exports.rotd_squad:ModifyReputation(src, 'heal')
+
+    -- class XP, if you defined the action in Config.GameplayXP
+    local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'medic_revive')
+    if not ok and reason ~= 'wrong_selected_class' then print('XP:', reason) end
+end)
+```
+
+```lua
+-- client.lua
+RegisterNetEvent('mybandage:client:use', function()
+    local zone = exports.rotd_zones:GetZonePlayerin()
+    if zone.rules and zone.rules.Weapons == false then
+        -- safezone: use freely
+    end
+    exports.rotd_zones:AddResistanceModifier('bandage_buff', 5, 'Fresh Bandage')
+    SetTimeout(60000, function() exports.rotd_zones:RemoveResistanceModifier('bandage_buff') end)
+    TriggerServerEvent('mybandage:server:used')
+end)
+```
+
+<!-- page: Home | https://lysoon.github.io/rotd_tebexwiki/#/Home -->
+# ROTD Developer Wiki
+
+Documentation for the exports, events and APIs of the ROTD resources, with examples.
+
+**Pages**
+
+| Page | What it covers |
+|---|---|
+| [[Getting-Started]] | how exports, client/server sides and trust work, conventions used on every page |
+| [[rotd_bridge]] | the shared bridge: framework / inventory / optional-resource API used by every ROTD resource |
+| [[rotd_zones]] | zones, radiation, resistance, infection hooks, zombie names |
+| [[rotd_squad]] | squads, reputation, stats, building access |
+| [[rotd_classystem]] | classes, skills, modifiers, XP |
+| [[npc_guide]] | quests, event tracking, currency market |
+| [[rotd_leaderboard]] | daily and lifetime stat reads |
+| [[rotd-minigame]] | minigames (lockpick, syringe, ...) |
+| [[rotd_loots]] | loot sense and loot props |
+| [[rotd_recyclers]] | recycler notifications |
+| [[rotd_scavs]] | give items / swap weapons on scavengers |
+| [[rotd_blips]] | no-build points |
+| [[vehicle_spawner]] | vehicle protection, cleanup timer, damage hooks |
+| [[Small-Exports]] | rotd_events and rotd_mystery_merchant |
+
+> The wiki describes the exports as they are in the code today. Resources that are not converted to `rotd_bridge` yet may change their internals (never their export signatures) during the multi-framework conversion.
+
+**Publishing this wiki:** this folder is in GitHub-wiki format. Clone `https://github.com/<you>/<repo>.wiki.git`, copy these `.md` files in, commit and push. `[[Page-Name]]` links and `_Sidebar.md` work as they are.
+
+<!-- page: npc_guide | https://lysoon.github.io/rotd_tebexwiki/#/npc_guide -->
+# npc_guide
+
+Quest NPCs, quest progress, and the currency exchange market.
+
+## Server exports: quests
+
+All of these take the player's **server id** (`src`, `number`) first.
+
+#### `GiveQuest(src, questId)`
+
+Gives a quest to a player.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `questId` | `string` | Quest id. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.npc_guide:GiveQuest(src, 'first_steps')
+```
+
+
+#### `UpdateQuestProgress(src, questId, objectiveId, amount)`
+
+Advances one objective of one quest.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `questId` | `string` | Quest id. |
+| `objectiveId` | `string` | Objective inside that quest. |
+| `amount` | `number` | Progress to add. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.npc_guide:UpdateQuestProgress(src, 'tag_hunt', 'collect_tags', 1)
+```
+
+
+#### `TrackEvent(src, event, amount, meta)`
+
+Advances **every active objective** that listens for that event. You do not need quest ids, which makes it the easiest way to feed quests from your own scripts.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `event` | `string` | Event name, e.g. `'scav_kill'`. |
+| `amount` | `number` | How much to add. |
+| `meta` | `table?` | Optional extra data, e.g. `{ type = 'lockpick' }`. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+-- count a kill for any quest that listens for 'scav_kill'
+exports.npc_guide:TrackEvent(killerSrc, 'scav_kill', 1)
+exports.npc_guide:TrackEvent(src, 'minigame', 1, { type = 'lockpick' })
+```
+
+
+#### `TracksEvent(src, event)`
+
+Cheap guard: does the player have an active objective for that event? Skip heavy work when not.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `event` | `string` | Event name. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if exports.npc_guide:TracksEvent(src, 'drive_distance') then
+    -- report distance
+end
+```
+
+
+#### `CompleteQuest(src, questId)`
+
+Force-completes the objectives of a quest.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `questId` | `string` | Quest id. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.npc_guide:CompleteQuest(src, 'first_steps')
+```
+
+
+#### `ClaimReward(src, questId)`
+
+Claims the reward of a finished quest. The HUD calls this on the claim button.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `questId` | `string` | Quest id. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.npc_guide:ClaimReward(src, 'first_steps')
+```
+
+
+#### `AbandonQuest(src, questId)`
+
+Cancels a quest.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `questId` | `string` | Quest id. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.npc_guide:AbandonQuest(src, 'first_steps')
+```
+
+
+#### `GetPlayerQuests(src)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `table`: `{ [questId] = snapshot }` for all known quests.
+
+**Example**
+
+```lua
+for questId, snapshot in pairs(exports.npc_guide:GetPlayerQuests(src)) do
+    print(questId, json.encode(snapshot))
+end
+```
+
+
+## Client exports
+
+#### `TrackMinigame(mtype, difficulty)`
+
+Reports a **successful** minigame to the server (rate limited server side). Called by `rotd-minigame`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `mtype` | `string` | Minigame type. |
+| `difficulty` | `number` | Difficulty, `1` to `7`. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.npc_guide:TrackMinigame('lockpick', 4)
+```
+
+
+#### `HasShopkeeper(shopKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `shopKey` | `string` | Shop key. |
+
+**Returns** `string | nil`: the shopkeeper's display name, `nil` when no dialogue exists for that shop key.
+
+**Example**
+
+```lua
+local name = exports.npc_guide:HasShopkeeper('currency')
+if name then print('talk to', name) end
+```
+
+
+#### `OpenShopkeeper(shopKey, ped, shopNum)`
+
+Opens the shopkeeper dialogue, then the shop.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `shopKey` | `string` | Shop key. |
+| `ped` | `number` | The shopkeeper ped entity. |
+| `shopNum` | `number` | Shop number. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.npc_guide:OpenShopkeeper('currency', ped, 1)
+```
+
+
+## Server exports: market
+
+#### `ReportCurrencyFlow(name, units, shopKey)`
+
+Tells the market that currency entered or left the economy. Positive units are supply and push the price down at the next settlement.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | `string` | Currency name, e.g. `'dogtag'`. |
+| `units` | `number` | `+` minted, `-` burned. |
+| `shopKey` | `string?` | Optional shop. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+-- 40 dog tags entered the economy, 25 left it
+exports.npc_guide:ReportCurrencyFlow('dogtag', 40)
+exports.npc_guide:ReportCurrencyFlow('dogtag', -25)
+```
+
+
+#### `SetCurrencySupply(name, units, shopKey)`
+
+Sets how much of the currency exists in the world. Only used when `Config.ExchangeRates.circulationLiquidity > 0`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | `string` | Currency name. |
+| `units` | `number` | Amount that exists in the world. |
+| `shopKey` | `string?` | Optional shop. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.npc_guide:SetCurrencySupply('dogtag', 5000)
+```
+
+
+#### `GetMarketSnapshot(shopKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `shopKey` | `string` | Shop key. |
+
+**Returns** `table | nil`: `{ [name] = row }`, where every row has:
+
+| Field | Type | Description |
+|---|---|---|
+| `value` | `number` | Current price. |
+| `base` | `number` | Base price. |
+| `min` / `max` | `number` | Price limits. |
+| `circulation` | `number` | Units in circulation. |
+| `netThisWindow` | `number` | Net flow in the current window. |
+| `volumeThisWindow` | `number` | Traded volume in the current window. |
+| `tradersThisWindow` | `number` | Traders in the current window. |
+| `settleIn` | `number` | Time until the next settlement. |
+
+**Example**
+
+```lua
+local board = exports.npc_guide:GetMarketSnapshot('currency')
+if board and board.dogtag then print(board.dogtag.value) end
+```
+
+
+#### `GetMarketHistory(shopKey, name, span, sinceSeconds)`
+
+Price history as candles.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `shopKey` | `string` | Shop key. |
+| `name` | `string` | Currency name. |
+| `span` | `string` | `'hourly'` or `'daily'`. |
+| `sinceSeconds` | `number?` | Only return candles newer than this many seconds. |
+
+**Returns** `table[]`: candles, oldest first: `{ bucket, open, high, low, close, volume, net, mint, traders }`.
+
+**Example**
+
+```lua
+local candles = exports.npc_guide:GetMarketHistory('currency', 'dogtag', 'daily')
+```
+
+
+#### `GetMarketBoard(shopKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `shopKey` | `string` | Shop key. |
+
+**Returns** `table`: the rows the exchange dialogue shows.
+
+**Example**
+
+```lua
+local rows = exports.npc_guide:GetMarketBoard('currency')
+```
+
+
+#### `PushMarketMonitor(monitor)`
+
+Posts or updates the Discord monitor.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `monitor` | `string` | `'daily'` or `'weekly'`. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.npc_guide:PushMarketMonitor('daily')
+```
+
+
+## Data shapes
+
+### Quest definition (`shared/quests.lua`)
+
+```lua
+Quests['tag_hunt'] = {
+    id = 'tag_hunt',
+    title = 'Tag Hunt',
+    description = 'Bring me dog tags.',
+    objectives = {
+        { id = 'collect_tags', label = 'Deliver Dog Tags', count = 5,
+          track = 'deliver', item = 'dogtag', itemLabel = 'Dog Tag' },
+        { id = 'kill_scavs', label = 'Kill scavengers', count = 10, track = 'scav_kill' },
+        { id = 'pick_locks', label = 'Pick locks', count = 5, track = 'minigame', filter = { type = 'lockpick' } },
+    },
+    rewards = { { type = 'money' }, { type = 'item' }, { type = 'xp' }, { type = 'custom' } },   -- list, each has a type
+    requires = { 'first_steps' },        -- quest ids that must be CLAIMED first
+    minLevel = 5,                        -- rotd-hud level (an unknown level never blocks)
+    repeatable = false,
+    cooldown = 0,                        -- seconds before a repeatable quest can be retaken
+    autoComplete = false,                -- true = reward is granted without a claim step
+}
+```
+
+### Quest status values
+
+`'available'` (not taken), `'active'`, `'completed'` (objectives done, reward not claimed), `'claimed'` (finished).
+
+### Snapshot (`GetPlayerQuests`)
+
+```lua
+{
+    id = 'tag_hunt',
+    title = 'Tag Hunt',
+    description = 'Bring me dog tags.',
+    status = 'active',
+    objectives = {
+        { id = 'collect_tags', label = 'Deliver Dog Tags', current = 2, total = 5 },
+    },
+    rewards = { ... },
+    repeatable = false,
+}
+```
+
+### Event names for `TrackEvent`
+
+| Event | What `amount` counts | `meta` |
+|---|---|---|
+| `deliver` | handed in at the NPC (not a passive counter) | |
+| `player_kill` | kills | |
+| `vehicle_destroy` | vehicles | |
+| `scav_kill` | scavenger kills | |
+| `zombie_kill` | kills (killing blow only) | `type`, `base`, `melee`, `weapon`, `zone`, `variant` |
+| `revive` | revives | `kind` = `'defib'` or `'stabilize'` |
+| `minigame` | successful minigames | `type`, `difficulty` |
+| `playtime` | **seconds** | |
+| `run_distance` | **metres** on foot | |
+| `drive_distance` | **metres** as the driver | |
+| `shop_purchase` | items received | `shop`, `item` |
+| `shop_spend` | money spent | `shop`, `billType` |
+| `backpack_upgrade` | upgrades | `level` (the new level) |
+| `backpack_repair` | repairs | |
+| `exchange` | trades | `from`, `to` (currency item names) |
+| `bank_transfer` | the **amount** moved | `action` = `'deposit'` or `'withdraw'` |
+
+Any other string is allowed: define an objective with `track = 'my_event'` and report it with `TrackEvent(src, 'my_event', 1, meta)`. A `filter` on the objective must match every key of the reported `meta`.
+
+### Real keys used in examples
+
+Quests: `first_steps` (objective `survive_start`, 600 s of `playtime`), `tag_hunt` (objective `collect_tags`), `on_foot` (objective `run_far`, `run_distance`). Shop keys (jim-shops locations): `medicshop`, `baseshop`, `weaponSHOP`, `utilityShop`, `currency`, `casinoshop`, `bagshop`, `barber`, `foodshop`, `mechanic`. Currencies traded at the `currency` desk: `money`, `sodacap`, `dogtag`, `medal`.
+
+## Recipes
+
+### Quest progress from your own system (server)
+
+```lua
+-- a bounty script: every completed bounty counts for quests that listen for 'bounty_done'
+RegisterNetEvent('mybounty:server:done', function(bountyId)
+    local src = source
+    if exports.npc_guide:TracksEvent(src, 'bounty_done') then
+        exports.npc_guide:TrackEvent(src, 'bounty_done', 1, { bounty = bountyId })
+    end
+end)
+```
+
+### Show a player's quest list (server)
+
+```lua
+RegisterCommand('myquests', function(src)
+    for questId, q in pairs(exports.npc_guide:GetPlayerQuests(src)) do
+        if q.status == 'active' then
+            for _, o in ipairs(q.objectives) do
+                print(('%s: %s %d/%d'):format(q.title, o.label, o.current, o.total))
+            end
+        end
+    end
+end, false)
+```
+
+### Give a quest from a mission script (server)
+
+```lua
+RegisterNetEvent('mymission:server:accepted', function()
+    local src = source
+    exports.npc_guide:GiveQuest(src, 'first_steps')
+end)
+```
+
+### Keep the exchange market honest (server)
+
+```lua
+-- your crafting recipe burns dog tags: report the sink so the price reacts
+local function craftWithTags(src, tags)
+    -- ... remove the tags from the player ...
+    exports.npc_guide:ReportCurrencyFlow('dogtag', -tags)
+end
+
+-- once per 10 minutes tell the market how many tags exist (needs Config.ExchangeRates.circulationLiquidity > 0)
+CreateThread(function()
+    while true do
+        Wait(10 * 60000)
+        exports.npc_guide:SetCurrencySupply('dogtag', CountAllDogTags())     -- your own count
+    end
+end)
+```
+
+### Read the live price board (server)
+
+```lua
+local snapshot = exports.npc_guide:GetMarketSnapshot('currency')
+if snapshot then
+    for name, row in pairs(snapshot) do
+        print(name, row.value, ('range %s-%s'):format(row.min, row.max), 'settles in', row.settleIn)
+    end
+end
+
+-- last 24 hourly candles of dog tags
+local candles = exports.npc_guide:GetMarketHistory('currency', 'dogtag', 'hourly', 86400)
+for _, c in ipairs(candles) do print(c.bucket, c.open, c.high, c.low, c.close) end
+```
+
+### Report a successful minigame (client)
+
+```lua
+-- rotd-minigame already does this on success; use it only for your own minigame
+exports.npc_guide:TrackMinigame('lockpick', 4)
+```
+
+<!-- page: rotd_blips | https://lysoon.github.io/rotd_tebexwiki/#/rotd_blips -->
+# rotd_blips
+
+Discoverable map blips and POIs. Its exports give **positions where building should be blocked**; `rotd_zones` uses them for its no-build gate. Called from the **client** (the config is shared, so server use also works).
+
+Each point is a flat table `{ x, y, z, id, name, radius }`, see Data shapes below.
+
+> [!TIP]
+> To ask "can I build here?", use `rotd_zones:CanBuildAtCoords` instead, see [[rotd_zones]].
+
+## Client exports
+
+#### `GetBigBlipNoBuildPoints()`
+
+**Returns** `table[]`: points of the big (always shown) blips.
+
+**Example**
+
+```lua
+local points = exports.rotd_blips:GetBigBlipNoBuildPoints()
+```
+
+
+#### `GetPoiNoBuildPoints()`
+
+Points of the small discover-on-approach POIs, **one per location**. A definition with 28 fuel stations gives 28 points.
+
+**Returns** `table[]`: the POI points.
+
+**Example**
+
+```lua
+print(#exports.rotd_blips:GetPoiNoBuildPoints(), 'poi points')
+```
+
+
+#### `GetAllNoBuildPoints()`
+
+**Returns** `table[]`: both sets together.
+
+**Example**
+
+```lua
+for _, p in ipairs(exports.rotd_blips:GetAllNoBuildPoints()) do
+    -- p holds the position and radius to keep clear
+end
+```
+
+
+## Admin command
+
+`/blipreveal [on|off]` (admin): shows every location on your own map for checking. Nothing is saved.
+
+## Data shapes
+
+Every point returned by the three exports is a flat table:
+
+```lua
+{
+    x = 215.0, y = -810.0, z = 30.0,   -- position
+    id = 'poi_fuel_3',                 -- blip id; POIs with several locations get one id per location
+    name = 'Fuel Station',             -- display name from the config
+    radius = 80.0,                     -- metres from `noBuildRadius`, or nil = "use the radius of my source"
+}
+```
+
+`radius = nil` means rotd_zones applies the radius configured for that source in `Config.NoBuild`. A location with `noBuild = false` in its config is not returned at all.
+
+## Recipes
+
+### Keep your own system away from landmarks (client or server)
+
+```lua
+local DEFAULT_RADIUS = 40.0
+local points = exports.rotd_blips:GetAllNoBuildPoints()
+
+local function nearLandmark(coords)
+    for _, p in ipairs(points) do
+        local r = p.radius or DEFAULT_RADIUS
+        if #(coords - vector3(p.x, p.y, p.z)) < r then
+            return true, p.name
+        end
+    end
+    return false
+end
+
+local blocked, name = nearLandmark(GetEntityCoords(PlayerPedId()))
+```
+
+### Let rotd_zones decide (it already uses these points and the configured radii)
+
+```lua
+local ok, reason, distance = exports.rotd_zones:CanBuildAtCoords(coords)
+if not ok then print(exports.rotd_zones:GetNoBuildMessage(reason), distance) end
+```
+
+<!-- page: rotd_bridge | https://lysoon.github.io/rotd_tebexwiki/#/rotd_bridge -->
+# rotd_bridge
+
+The shared layer between ROTD resources and your framework, inventory and optional partner resources. A resource never calls `QBCore`, `ox_inventory` and so on directly: it asks the bridge.
+
+> [!NOTE]
+> `rotd_bridge` has **no exports to call for gameplay**. It builds a global `Bridge` table inside every resource that loads it. The functions below live on that table.
+
+## Using it in your resource
+
+```lua
+-- fxmanifest.lua
+dependencies { 'ox_lib', 'rotd_bridge' }
+shared_script '@ox_lib/init.lua'
+shared_script '@rotd_bridge/init.lua'      -- builds the global `Bridge`
+rotd_player_data 'yes'                      -- optional: you store per-character data (ESX table is created)
+rotd_sql 'sql/install.sql'                  -- optional: tables the DB check should create and verify
+```
+
+Start `rotd_bridge` after your framework, inventory and `ox_lib`, before the ROTD resources.
+
+## Configuration (`rotd_bridge/config.lua`)
+
+| Key | Default | Meaning |
+|---|---|---|
+| `framework` | `'auto'` | `'qb'`, `'qbox'`, `'esx'` or auto-detect (convar `rotd_framework`) |
+| `inventory` | `'auto'` | `'core_inventory'`, `'ox_inventory'`, `'qb-inventory'` or auto (convar `rotd_inventory`). Auto order: core_inventory, ox_inventory, qb-inventory (+ ps / lj forks) |
+| `coreHolderRefs` | `{}` | core_inventory only: format patterns (`%s` = identifier) of inventories that hold worn clothing |
+| `esxAdminGroups` | `{'admin','superadmin'}` | ESX groups counted as admin |
+| `optionalGraceMs` | `8000` | wait before an optional-feature console line is printed |
+| `dbCheckMinDelayMs`, `dbSettleMs`, `dbCheckMaxDelayMs` | 3000 / 2500 / 20000 | when the database check runs after start |
+| `dbAutoCreate`, `dbAutoAddColumns` | `true` / `false` | create missing tables / add missing columns to resource tables |
+| `dbScanNames`, `dbScanIgnore` | patterns / `{'rotd_whitelistv2'}` | which running resources the DB check looks at |
+
+## Bridge.Framework (server)
+
+`src` is the player's server id (`number`).
+
+#### `Bridge.Framework.GetPlayer(src)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `table`: the framework's own player object.
+
+**Example**
+
+```lua
+local player = Bridge.Framework.GetPlayer(src)
+```
+
+
+#### `Bridge.Framework.GetIdentifier(src)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `string`: the `citizenid` on QB/Qbox, the `identifier` on ESX.
+
+**Example**
+
+```lua
+local cid = Bridge.Framework.GetIdentifier(src)
+```
+
+
+#### `Bridge.Framework.GetName(src)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `string`: first and last name of the character.
+
+**Example**
+
+```lua
+print(Bridge.Framework.GetName(src))
+```
+
+
+#### `Bridge.Framework.GetCharValue(src, key)`
+
+Reads a persistent per-character value (charinfo on QB/Qbox, `rotd_player_data` on ESX).
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `key` | `string` | Name of the value. |
+
+**Returns** `any`: the stored value, or `nil`.
+
+**Example**
+
+```lua
+local data = Bridge.Framework.GetCharValue(src, 'blipdata') or {}
+```
+
+
+#### `Bridge.Framework.SetCharValue(src, key, value, opts)`
+
+Stores a persistent per-character value.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `key` | `string` | Name of the value. |
+| `value` | `any` | Value to store. |
+| `opts` | `table?` | `{ save = false }` updates memory only (QB/Qbox). |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+-- remember a value for a character on any framework
+Bridge.Framework.SetCharValue(src, 'blipdata', { poi_fuel_3 = true })
+```
+
+
+#### `Bridge.Framework.IsAdmin(src)`
+
+Checks the framework permission, the ESX group, or the ACE `command` permission. The console counts as admin.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if Bridge.Framework.IsAdmin(src) then
+    -- allow
+end
+```
+
+
+#### `Bridge.Framework.RegisterCommand(name, help, params, fn, opts)`
+
+Registers a command that works on any framework.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | `string` | Command name. |
+| `help` | `string` | Help text. |
+| `params` | `table` | Parameter definitions (`{}` for none). |
+| `fn` | `function` | `fn(source, args)`, runs when the command is used. |
+| `opts` | `table?` | `{ admin = true }` makes the command admin-only. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+Bridge.Framework.RegisterCommand('hello', 'Say hello', {}, function(source, args)
+    print('hello from', source)
+end, { admin = true })
+```
+
+
+## Bridge.Framework (client)
+
+#### `Bridge.Framework.GetPlayerData()`
+
+**Returns** `table`: the framework's local player data.
+
+**Example**
+
+```lua
+local pd = Bridge.Framework.GetPlayerData()
+```
+
+
+#### `Bridge.Framework.IsLoggedIn()`
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if Bridge.Framework.IsLoggedIn() then
+    -- character is loaded
+end
+```
+
+
+#### `Bridge.Framework.OnPlayerLoaded(cb)`
+
+Runs a callback on every login, and once immediately when the player is already logged in.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cb` | `function` | Called with no arguments. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+Bridge.Framework.OnPlayerLoaded(function()
+    print('character ready')
+end)
+```
+
+
+#### `Bridge.Framework.OnPlayerUnloaded(cb)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cb` | `function` | Called with no arguments on logout. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+Bridge.Framework.OnPlayerUnloaded(function()
+    -- clean up
+end)
+```
+
+
+#### `Bridge.Framework.GetCharValue(key)`
+
+Persistent per-character value of the local player.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `key` | `string` | Name of the value. |
+
+**Returns** `any`: the stored value, or `nil`.
+
+**Example**
+
+```lua
+local data = Bridge.Framework.GetCharValue('blipdata')
+```
+
+
+#### `Bridge.Framework.GetGender()`
+
+**Returns** `number`: `0` male, `1` female.
+
+**Example**
+
+```lua
+local isFemale = Bridge.Framework.GetGender() == 1
+```
+
+
+## Bridge.Inventory (server)
+
+#### `Bridge.Inventory.GetItems(src)`
+
+Lists a player's items in one format, whichever inventory runs (core_inventory, ox_inventory, qb-inventory).
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `table[]`: `{ { name, count, slot, metadata, worn }, ... }`.
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `string` | Item name. |
+| `count` | `number` | Stack size. |
+| `slot` | `number` | Inventory slot. |
+| `metadata` | `table` | Item metadata. |
+| `worn` | `boolean` | Whether the item is worn clothing. |
+
+**Example**
+
+```lua
+for _, item in ipairs(Bridge.Inventory.GetItems(src)) do
+    if item.name == 'bandage' then print('has bandage', item.count) end
+end
+```
+
+
+#### `Bridge.Inventory.Name`
+
+A value, not a function.
+
+**Returns** `string`: which inventory is in use.
+
+**Example**
+
+```lua
+print('inventory:', Bridge.Inventory.Name)
+```
+
+
+## Bridge.Optional
+
+#### `Bridge.Optional(resource, meta)`
+
+Cooperation with a resource that may not run. Returns a handle you use instead of calling the resource directly.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `resource` | `string` | Name of the partner resource. |
+| `meta.feature` | `string` | Feature name shown in the console. |
+| `meta.fallback` | `string` | Text describing what happens without the partner. |
+| `meta.alt` | `string?` | Set when a built-in replacement exists: prints an info line instead of a warning. |
+
+**Returns** `table`: the handle, with these members:
+
+| Member | Returns | Description |
+|---|---|---|
+| `available()` | `boolean` | Is the partner running. |
+| `call(exportName, ...)` | `any` | Result of the export, or `nil` when unavailable (pcall-wrapped). |
+| `trigger(event, ...)` | nothing | Local event, only when available. |
+| `triggerClient(target, event, ...)` | nothing | Server to client event, only when available. |
+| `onStart(cb)`, `onStop(cb)` | nothing | Live enable/disable callbacks. |
+
+**Example**
+
+```lua
+local zones = Bridge.Optional('rotd_zones', {
+    feature  = 'Night-time helicopter behaviour',
+    fallback = 'helicopters always use day behaviour',
+})
+
+if zones.available() then
+    local night = zones.call('IsNightTime')
+end
+zones.onStart(function() print('rotd_zones came up') end)
+zones.onStop(function() print('rotd_zones went away') end)
+```
+
+
+Console output: `[rotd_bridge] <resource>: feature "<feature>" is DISABLED. To enable it, start resource "<partner>". Fallback: ...`, and `... ENABLED ...` when it appears later.
+
+## Bridge.Hud
+
+Optional integration with the ROTD HUD (not shipped). Calls are skipped while it is not running.
+
+#### `Bridge.Hud.Init(feature, fallback)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `feature` | `string` | Feature text for the console line. |
+| `fallback` | `string?` | Text describing the built-in fallback. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+Bridge.Hud.Init('Zone card display', 'the built-in zone UI')
+```
+
+
+#### `Bridge.Hud.IsReady()`
+
+**Returns** `boolean`: whether the HUD is running and ready.
+
+**Example**
+
+```lua
+if Bridge.Hud.IsReady() then Bridge.Hud.Export('EnterZone', data) end
+```
+
+
+#### `Bridge.Hud.Export(name, ...)`
+
+Calls an export of the HUD, skipped while the HUD is not running.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `name` | `string` | HUD export name. |
+| `...` | `any` | Arguments passed to the export. |
+
+**Returns** `any`: whatever the HUD export returns.
+
+**Example**
+
+```lua
+Bridge.Hud.Export('EnterZone', data)
+```
+
+
+## Bridge.Medical
+
+#### `Bridge.Medical.IsDead()` (client)
+
+Works with any medical resource (falls back to player state and health).
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if Bridge.Medical.IsDead() then return end
+```
+
+
+#### `Bridge.Medical.Infection(feature)`
+
+Handle for a medical resource that has an infection system. See [[rotd_zones]] for the infection exports that replace it in zones.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `feature` | `string` | Feature name for the console line. |
+
+**Returns** `table`: the infection handle.
+
+## Bridge.Garage (client)
+
+#### `Bridge.Garage.IsInGarage()`
+
+qb-garages is supported.
+
+**Returns** `boolean`: whether the player is inside a garage.
+
+**Example**
+
+```lua
+if Bridge.Garage.IsInGarage() then
+    -- skip the check
+end
+```
+
+
+## Bridge.Log
+
+#### `Bridge.Log.info / warn / error / debug(fmt, ...)`
+
+Prints a log line prefixed with `[rotd_bridge]`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `fmt` | `string` | Format string (like `string.format`). |
+| `...` | `any` | Values for the format string. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+Bridge.Log.info('loaded %d zones', 12)
+Bridge.Log.warn('missing config key %s', 'foo')
+```
+
+
+## Exports of rotd_bridge itself (server)
+
+#### `GetPlayerValue(identifier, key)`
+
+Reads from the ESX store (`rotd_player_data`).
+
+| Parameter | Type | Description |
+|---|---|---|
+| `identifier` | `string` | ESX identifier. |
+| `key` | `string` | Name of the value. |
+
+**Returns** `any`: the stored value, or `nil`.
+
+**Example**
+
+```lua
+local v = exports.rotd_bridge:GetPlayerValue(identifier, 'blipdata')
+```
+
+
+#### `SetPlayerValue(identifier, key, value)`
+
+Writes to the ESX store.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `identifier` | `string` | ESX identifier. |
+| `key` | `string` | Name of the value. |
+| `value` | `any` | Value to store. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_bridge:SetPlayerValue(identifier, 'blipdata', { seen = true })
+```
+
+
+#### `GetDbHealth()`
+
+**Returns** `table`: the result of the last database check, per table.
+
+**Example**
+
+```lua
+local health = exports.rotd_bridge:GetDbHealth()
+print(json.encode(health))
+```
+
+
+## Database check
+
+Runs once after start. It lists every running ROTD resource, creates missing tables declared with `rotd_sql '<file>'` (it reads the `CREATE TABLE` statements) and `rotd_player_data 'yes'`, reports missing columns and row counts. Re-run manually from the console: `rotdbridge db`.
+
+## Recipes
+
+### A complete small resource on the bridge (server)
+
+```lua
+-- fxmanifest.lua
+-- dependencies { 'ox_lib', 'rotd_bridge' }
+-- shared_script '@ox_lib/init.lua'
+-- shared_script '@rotd_bridge/init.lua'
+-- rotd_player_data 'yes'
+-- server_script 'server.lua'
+
+-- server.lua: works on QB, Qbox and ESX with any supported inventory
+Bridge.Framework.RegisterCommand('givehello', 'Count how many times you said hello', {}, function(src)
+    local n = (Bridge.Framework.GetCharValue(src, 'hello_count') or 0) + 1
+    Bridge.Framework.SetCharValue(src, 'hello_count', n)
+    TriggerClientEvent('ox_lib:notify', src, { description = ('hello #%d'):format(n) })
+end)
+
+-- items: count bandages on a player
+local function bandages(src)
+    local n = 0
+    for _, item in ipairs(Bridge.Inventory.GetItems(src)) do
+        if item.name == 'bandage' then n = n + item.count end
+    end
+    return n
+end
+```
+
+### Use another ROTD resource only when it runs (client)
+
+```lua
+local zones = Bridge.Optional('rotd_zones', {
+    feature = 'Safezone-aware weapons',
+    fallback = 'weapons are always allowed',
+})
+
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local zone = zones.call('GetZonePlayerin')              -- nil when rotd_zones is not running
+        if zone and zone.rules and zone.rules.Weapons == false then
+            DisablePlayerFiring(PlayerId(), true)
+        end
+    end
+end)
+```
+
+### Run code when a framework character loads (client)
+
+```lua
+Bridge.Framework.OnPlayerLoaded(function()
+    print('character loaded, gender', Bridge.Framework.GetGender())
+end)
+Bridge.Framework.OnPlayerUnloaded(function() print('character left') end)
+```
+
+<!-- page: rotd_classystem | https://lysoon.github.io/rotd_tebexwiki/#/rotd_classystem -->
+# rotd_classystem
+
+Classes, skills, XP and modifiers. Modifiers are multipliers (`1.0` = normal) such as `meleeDamage`. Skills carry **effects** with numeric or boolean values.
+
+## Server exports
+
+All server exports take the player's **server id** (`src`, `number`) first.
+
+### Class information
+
+#### `GetPlayerClass(src)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `string`: the class key, or `'none'`.
+
+**Example**
+
+```lua
+if exports.rotd_classystem:GetPlayerClass(src) == 'medic' then
+    -- medic only
+end
+```
+
+
+#### `GetPlayerClassInfo(src)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `table | nil`:
+
+| Field | Type | Description |
+|---|---|---|
+| `class` | `string` | Selected class key. |
+| `level` | `number` | Class level. |
+| `xp` | `number` | Class XP. |
+| `allClasses` | `table` | Data of every class. |
+| `modifiers` | `table` | Modifier values. |
+| `effects` | `table` | Active skill effects. |
+| `unlockedSkills` | `table` | Unlocked skills. |
+
+**Example**
+
+```lua
+local info = exports.rotd_classystem:GetPlayerClassInfo(src)
+if info then print(info.class, info.level) end
+```
+
+
+#### `GetPlayerAllModifiers(src)`
+
+**Returns** `table`: every modifier value of the player.
+
+**Example**
+
+```lua
+local mods = exports.rotd_classystem:GetPlayerAllModifiers(src)
+print(mods.meleeDamage)
+```
+
+
+### Modifiers and skill effects
+
+#### `GetPlayerModifier(src, modifierName)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `modifierName` | `string` | Modifier name, e.g. `'meleeDamage'`. |
+
+**Returns** `number`: the multiplier, `1.0` when unknown.
+
+**Example**
+
+```lua
+local mult = exports.rotd_classystem:GetPlayerModifier(src, 'meleeDamage')
+```
+
+
+#### `HasMinimumModifier(src, modifierType, minimumValue)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `modifierType` | `string` | Modifier name. |
+| `minimumValue` | `number?` | Minimum, default `1.0`. |
+
+**Returns** `boolean`: `true` when the modifier is at least the minimum.
+
+**Example**
+
+```lua
+if exports.rotd_classystem:HasMinimumModifier(src, 'movementSpeed', 1.2) then
+    -- fast runner
+end
+```
+
+
+#### `HasSkillUnlocked(src, skillKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `skillKey` | `string` | Skill key in the form `branch::skill::tier`. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+local has = exports.rotd_classystem:HasSkillUnlocked(src, 'weapon_mastery::quick_reload::1')
+```
+
+
+#### `GetSkillEffectValue(src, effectKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `effectKey` | `string` | Effect name. |
+
+**Returns** `number`: the effect value, `0` when absent. Booleans count as `1` / `0`.
+
+**Example**
+
+```lua
+local bonus = exports.rotd_classystem:GetSkillEffectValue(src, 'reloadSpeed')
+```
+
+
+#### `GetSkillEffectBool(src, effectKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `effectKey` | `string` | Effect name. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+-- medics with the Drag Revive skill may move slowly while reviving
+local canMoveWhileReviving = exports.rotd_classystem:GetSkillEffectBool(src, 'mobileRevive')
+```
+
+
+#### `GetAllSkillEffects(src)`
+
+**Returns** `table`: the player's active effects.
+
+**Example**
+
+```lua
+for key, value in pairs(exports.rotd_classystem:GetAllSkillEffects(src)) do
+    print(key, value)
+end
+```
+
+
+#### `RefreshPlayerSkillCache(src, className)`
+
+Rebuilds and stores the effect cache of a player.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `className` | `string?` | Class to rebuild for. Optional. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_classystem:RefreshPlayerSkillCache(src)
+```
+
+
+### XP and levels
+
+Class levels mirror the HUD level 1:1 (class XP progression itself is disabled).
+
+#### `GetPlayerExperience(src)`
+
+**Returns** two values: `xp` (`number`) and `level` (`number`) of the selected class.
+
+**Example**
+
+```lua
+local xp, level = exports.rotd_classystem:GetPlayerExperience(src)
+```
+
+
+#### `GetClassExperience(src, className)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `className` | `string` | Class key. |
+
+**Returns** two values: `xp` (`number`) and `level` (`number`).
+
+**Example**
+
+```lua
+local xp, level = exports.rotd_classystem:GetClassExperience(src, 'medic')
+```
+
+
+#### `SyncHudLevel(src, hudLevel)`
+
+Sets the selected class level to the HUD level. Never lowers it. **Authorised**, see the note below.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `hudLevel` | `number` | The HUD level. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_classystem:SyncHudLevel(src, 12)
+```
+
+
+#### `AddExperience(src, amount)` / `AddExperienceToClass(src, className, amount)`
+
+Currently always returns `false` (HUD-level mode). **Authorised.**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `className` | `string` | Class key (`AddExperienceToClass` only). |
+| `amount` | `number` | XP to add. |
+
+**Returns** `boolean`: always `false` for now.
+
+#### `AddBonusSkillPoints(src, className, amount)`
+
+Gives skill points. **Authorised.**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `className` | `string` | Class key. |
+| `amount` | `number` | Points to add. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_classystem:AddBonusSkillPoints(src, 'medic', 1)
+```
+
+
+#### `AwardActionExperience(src, actionKey, context)`
+
+Awards XP for a configured action. **Authorised.**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `actionKey` | `string` | Action key from the config. |
+| `context` | `table?` | Extra context for the action. |
+
+**Returns** two values: `boolean` success and `string` reason.
+
+**Example**
+
+```lua
+local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'engineer_craft')
+```
+
+
+### Skill states
+
+#### `ActivatePlayerSkill(src, skillId, ...)`
+
+Triggers an activatable skill on the server. **Authorised.**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `skillId` | `string` | Skill id. |
+| `...` | `any` | Skill-specific arguments. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_classystem:ActivatePlayerSkill(src, 'adrenaline_rush')
+```
+
+
+#### `IsSkillStateActive(src, skillId)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `skillId` | `string` | Skill id. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if exports.rotd_classystem:IsSkillStateActive(src, 'adrenaline_rush') then
+    -- skill running
+end
+```
+
+
+### Skill tree data (shared)
+
+`GetSkillTreeData()`, `GetSkillDefinition(...)` and `GetSkillVisualConfig(...)` return the skill tree configuration tables. They work on both client and server.
+
+### Who may call the mutating exports
+
+`SyncHudLevel`, `AddExperience*`, `AddBonusSkillPoints`, `AwardActionExperience` and `ActivatePlayerSkill` are **authorised**: the calling resource must be in `Config.TrustedServerResources` (an empty list trusts everyone), and calls are rate limited per player. Other callers are logged as `UNAUTHORIZED_RESOURCE_CALL` and get `false`.
+
+## Client exports
+
+#### `OpenClassSelector(options)`
+
+Opens the class selector.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `options` | `table?` | Selector options. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_classystem:OpenClassSelector()
+```
+
+
+#### `GetPlayerClass()`
+
+**Returns** `string`: the class key, or `'none'`.
+
+**Example**
+
+```lua
+local class = exports.rotd_classystem:GetPlayerClass()
+```
+
+
+#### `GetPlayerClassLevel()`
+
+**Returns** `number`: the class level.
+
+**Example**
+
+```lua
+local level = exports.rotd_classystem:GetPlayerClassLevel()
+```
+
+
+#### `GetPlayerClassXP()`
+
+**Returns** `number`: the class XP.
+
+**Example**
+
+```lua
+local xp = exports.rotd_classystem:GetPlayerClassXP()
+```
+
+
+#### `GetPlayerClassInfo()`
+
+**Returns** `table`: `{ class, level, xp, modifiers, effects, unlockedSkills }`.
+
+**Example**
+
+```lua
+local info = exports.rotd_classystem:GetPlayerClassInfo()
+print(info.class, info.level)
+```
+
+
+#### `GetPlayerModifier(modifierName)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `modifierName` | `string` | Modifier name. |
+
+**Returns** `number`: the effective value (class base plus skill bonuses).
+
+**Example**
+
+```lua
+-- run faster for runners
+local speed = exports.rotd_classystem:GetPlayerModifier('movementSpeed')
+SetRunSprintMultiplierForPlayer(PlayerId(), math.min(1.49, speed))
+```
+
+
+#### `GetPlayerAllModifiers()`
+
+**Returns** `table`: every modifier value.
+
+**Example**
+
+```lua
+local mods = exports.rotd_classystem:GetPlayerAllModifiers()
+```
+
+
+#### `HasMinimumModifier(modifierType, minimumValue)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `modifierType` | `string` | Modifier name. |
+| `minimumValue` | `number?` | Minimum, default `1.0`. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+local fast = exports.rotd_classystem:HasMinimumModifier('movementSpeed', 1.2)
+```
+
+
+#### `GetEffectValue(effectKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `effectKey` | `string` | Effect name. |
+
+**Returns** `number`: the effect value, `0` when absent.
+
+**Example**
+
+```lua
+local v = exports.rotd_classystem:GetEffectValue('reloadSpeed')
+```
+
+
+#### `GetSkillEffectBool(effectKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `effectKey` | `string` | Effect name. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if exports.rotd_classystem:GetSkillEffectBool('mobileRevive') then
+    -- effect is on
+end
+```
+
+
+#### `GetAllSkillEffects()`
+
+**Returns** `table`: a shallow copy of the active effects.
+
+**Example**
+
+```lua
+local effects = exports.rotd_classystem:GetAllSkillEffects()
+```
+
+
+#### `IsSkillUnlocked(skillId)` / `IsSkillActive(skillId)` / `IsSkillOnCooldown(skillId)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `skillId` | `string` | Skill id. |
+
+**Returns** `boolean`: unlocked, currently active, or on cooldown (depending on the export).
+
+**Example**
+
+```lua
+if exports.rotd_classystem:IsSkillUnlocked('adrenaline_rush')
+   and not exports.rotd_classystem:IsSkillOnCooldown('adrenaline_rush') then
+    exports.rotd_classystem:ActivateSkill('adrenaline_rush')
+end
+```
+
+
+#### `GetSkillCooldownRemaining(skillId)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `skillId` | `string` | Skill id. |
+
+**Returns** `number`: seconds left on the cooldown.
+
+**Example**
+
+```lua
+local left = exports.rotd_classystem:GetSkillCooldownRemaining('adrenaline_rush')
+```
+
+
+#### `GetSkillEffectValue(skillId, effectKey)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `skillId` | `string` | Skill id. |
+| `effectKey` | `string` | Effect name. |
+
+**Returns** `number`: the value of that effect for that skill.
+
+**Example**
+
+```lua
+local v = exports.rotd_classystem:GetSkillEffectValue('adrenaline_rush', 'speedBonus')
+```
+
+
+#### `ActivateSkill(skillId)`
+
+Triggers a skill.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `skillId` | `string` | Skill id. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_classystem:ActivateSkill('adrenaline_rush')
+```
+
+
+#### `PlaySkillVisualStage(skillId, stageName, context)`
+
+Plays a visual stage of a skill.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `skillId` | `string` | Skill id. |
+| `stageName` | `string` | Stage to play. |
+| `context` | `table?` | Extra context. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_classystem:PlaySkillVisualStage('adrenaline_rush', 'start')
+```
+
+
+## Data shapes
+
+### Classes
+
+Five classes exist: `mercenary`, `medic`, `engineer`, `gatherer`, `citizen` (`'none'` before one is chosen). Max level is `Config.MaxLevel` (100).
+
+### Modifiers
+
+A modifier is a multiplier (`1.0` = normal). `GetPlayerModifier` returns the class base **plus** the skill bonuses. These names exist on every class:
+
+| Modifier | Skill effect key that adds to it |
+|---|---|
+| `meleeDamage` | `meleeDamageBonus` |
+| `rangedDamage` | `rangedDamageBonus` |
+| `movementSpeed` | `movementSpeedBonus` |
+| `buildingSpeed` | `buildSpeedBonus` |
+| `lootQuantity` | `lootQuantityBonus` |
+| `healingPower` | `healingPowerBonus` |
+| `reviveSpeed` | `reviveSpeedBonus` |
+| `stealth` | `stealthBonus` |
+| `armor` | `armorBonus` |
+| `staminaMax` | `staminaMaxBonus` |
+| `staminaRegen` | `staminaRegenBonus` |
+
+### Skill keys and effects
+
+A skill is identified as `branchId::skillId::tier`, for example `weapon_mastery::quick_reload::1` (mercenary) or `trauma_response::drag_revive::1` (medic).
+
+Each skill carries `effects`. Effects of all unlocked skills are flattened into one table: **numbers are added together, booleans become `true` if any unlocked skill sets them**.
+
+```lua
+-- two unlocked skills each give healingSpeed
+-- { healingSpeed = 0.25 }  +  { healingSpeed = 0.30 }   ->   healingSpeed = 0.55
+
+-- examples of real effect keys
+reloadSpeed = 0.15        -- number
+recoilReduction = 0.10    -- number
+ammoDropChance = 0.10     -- number
+mobileRevive = true       -- boolean (medic, Drag Revive)
+instantBleedStop = true   -- boolean
+mobileHealing = true      -- boolean
+```
+
+### `GetPlayerClassInfo` result
+
+```lua
+{
+    class = 'medic',
+    level = 12,
+    xp = 5400,
+    modifiers = { meleeDamage = 0.4, rangedDamage = 1.0, healingPower = 1.3, movementSpeed = 0.7, armor = 10 },   -- plus the rest
+    effects = { mobileRevive = true, reloadSpeed = 0.15 },
+    unlockedSkills = { 'trauma_response::drag_revive::1' },   -- array of skill keys
+    -- server only:
+    allClasses = { medic = { level = 12, xp = 5400 }, mercenary = { level = 3, xp = 600 } },
+}
+```
+
+## Config-owned gameplay XP (`AwardActionExperience`)
+
+Lets any script grant class XP without hard-coding classes, amounts or rules. The rules live in `Config.GameplayXP` (shared config):
+
+```lua
+Config.GameplayXP = {
+    requireSelectedClass = true,            -- the player must currently have that class
+    actions = {
+        medic_revive = {
+            enabled    = true,
+            className  = 'medic',
+            xp         = 150,
+            cooldownMs = 3000,              -- per player
+            dedupeMs   = 10000,             -- collapse duplicate calls with the same dedupeKey
+            ignoreSelf = true,              -- ignore context.target == the player
+        },
+        engineer_craft = { enabled = true, className = 'engineer', xp = 60 },
+        gatherer_loot  = { enabled = true, className = 'gatherer', xp = 35, cooldownMs = 1000 },
+    },
+}
+```
+
+`Config.GameplayXP.actions` is empty by default: define your actions first. The calling resource must be in `Config.TrustedServerResources` (an empty list trusts every resource).
+
+`context` keys: `target` (another player's server id), `dedupeKey` (string).
+
+Return values `(boolean, reason)`:
+
+| Result | Meaning |
+|---|---|
+| `true, 'awarded'` | XP given |
+| `false, 'action_not_configured'` | key not in `Config.GameplayXP.actions` (or `enabled = false`) |
+| `false, 'wrong_selected_class'` | player has another class selected |
+| `false, 'self_target_ignored'` | `ignoreSelf` and the target is the player |
+| `false, 'duplicate_action'` | same `dedupeKey` inside `dedupeMs` |
+| `false, 'cooldown_active'` | `cooldownMs` has not passed |
+| `false, 'award_failed'` | internal failure |
+| `false, 'unauthorized'` | calling resource is not trusted |
+| `false, 'rate_limited'` | too many calls |
+| `false, 'invalid_request'` / `'invalid_player'` | bad arguments / player not loaded |
+
+## Events
+
+### Public
+
+| Event | Side | Payload | Use |
+|---|---|---|---|
+| `rotd_classystem:client:openClassSelector` | client (also `TriggerClientEvent` from the server) | `{ gender = 0 \| 1 \| 'male' \| 'female', isFirstTime = true \| false }` (both optional) | opens the class selector |
+| `rotd_classystem:server:skillActivated` | server (listen) | `src, skillId, args` | an active skill was activated (logging, analytics) |
+| `rotd:crouchChanged` | client (trigger from your crouch script) | `isCrouching` boolean | tells the class system the player crouches (stealth) |
+
+### Client events to listen to
+
+`rotd_classystem:client:applyWithLevel (className, level)`, `updateXP (xp, level, className)`, `onClassExperienceGain (amount, xp, level, className)`, `onClassLevelUp (oldLevel, newLevel, className)`, `receiveSkillPoints`, `receiveClassesData`, `forceReapplyModifiers (className, level)`.
+
+## Recipes
+
+### Passive bonus: scale melee damage by the class modifier (server)
+
+```lua
+-- server: a weapon damage event you already handle
+AddEventHandler('weaponDamageEvent', function(sender, data)
+    local src = tonumber(sender)
+    if not src then return end
+
+    local mult = exports.rotd_classystem:GetPlayerModifier(src, 'meleeDamage')
+    if mult ~= 1.0 then
+        -- apply mult to the damage you are about to deal
+        print(('player %d melee multiplier %.2f'):format(src, mult))
+    end
+end)
+```
+
+### Gate a feature behind a skill (server)
+
+```lua
+-- only medics who unlocked Drag Revive may drag while reviving
+local function canDragWhileReviving(src)
+    return exports.rotd_classystem:GetSkillEffectBool(src, 'mobileRevive')
+end
+
+-- or check the exact skill
+local has = exports.rotd_classystem:HasSkillUnlocked(src, 'trauma_response::drag_revive::1')
+```
+
+### Grant class XP when something happens (server)
+
+```lua
+-- 1. add the action to Config.GameplayXP.actions (see above)
+-- 2. call it from your script on success
+RegisterNetEvent('myrevive:server:revived', function(targetSrc)
+    local src = source
+    local ok, reason = exports.rotd_classystem:AwardActionExperience(src, 'medic_revive', {
+        target = targetSrc,
+        dedupeKey = ('revive:%d:%d'):format(src, targetSrc),
+    })
+    if not ok then print('no XP:', reason) end
+end)
+```
+
+### Client: speed up with the movement modifier
+
+```lua
+CreateThread(function()
+    while true do
+        Wait(1000)
+        local speed = exports.rotd_classystem:GetPlayerModifier('movementSpeed')
+        SetRunSprintMultiplierForPlayer(PlayerId(), math.min(1.49, math.max(1.0, speed)))
+    end
+end)
+```
+
+### Client: open the class selector for a new character
+
+```lua
+RegisterNetEvent('QBCore:Client:OnPlayerLoaded', function()
+    if exports.rotd_classystem:GetPlayerClass() == 'none' then
+        exports.rotd_classystem:OpenClassSelector({ isFirstTime = true })
+    end
+end)
+```
+
+### Active skill from your own resource
+
+```lua
+-- client: trigger a skill and read its cooldown
+if not exports.rotd_classystem:IsSkillOnCooldown('some_skill_id') then
+    exports.rotd_classystem:ActivateSkill('some_skill_id')
+else
+    print('ready in', exports.rotd_classystem:GetSkillCooldownRemaining('some_skill_id'), 's')
+end
+
+-- server: react to every activation
+AddEventHandler('rotd_classystem:server:skillActivated', function(src, skillId, args)
+    print(('player %d used %s'):format(src, skillId))
+end)
+```
+
+<!-- page: rotd_leaderboard | https://lysoon.github.io/rotd_tebexwiki/#/rotd_leaderboard -->
+# rotd_leaderboard
+
+Read-only stat lookups from the `player_stats` table. All exports are **server side** and take a **cid** (character id, `string`). Unknown players return `0`.
+
+> [!NOTE]
+> Stats are written by the resource's own events (`rotd_leaderboard:updateZombieKill` and similar). Other resources should not write them directly.
+
+## Server exports
+
+### Daily stats
+
+#### `GetZombieKillsPerDay(cid)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: zombie kills today.
+
+**Example**
+
+```lua
+local today = exports.rotd_leaderboard:GetZombieKillsPerDay(cid)
+```
+
+
+#### `GetDogTagsCollected(cid)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: dog tags collected today.
+
+**Example**
+
+```lua
+local tags = exports.rotd_leaderboard:GetDogTagsCollected(cid)
+```
+
+
+#### `GetLongestSurvivalStreak(cid)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: the longest survival streak, in days.
+
+**Example**
+
+```lua
+local days = exports.rotd_leaderboard:GetLongestSurvivalStreak(cid)
+```
+
+
+### Lifetime stats
+
+#### `GetZombieKillsTotal(cid)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: lifetime zombie kills.
+
+**Example**
+
+```lua
+local kills = exports.rotd_leaderboard:GetZombieKillsTotal(cid)
+if kills >= 1000 then print(cid, 'is a veteran') end
+```
+
+
+#### `GetPvpKillsRedzone(cid)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: lifetime PvP kills in red zones.
+
+**Example**
+
+```lua
+local pvp = exports.rotd_leaderboard:GetPvpKillsRedzone(cid)
+```
+
+
+#### `GetPlayerDistanceTravel(cid)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: lifetime distance travelled, rounded to 2 decimals.
+
+**Example**
+
+```lua
+local dist = exports.rotd_leaderboard:GetPlayerDistanceTravel(cid)
+```
+
+
+## Recipes
+
+### Veteran check and a top list (server)
+
+```lua
+RegisterCommand('mystats', function(src)
+    local cid = GetCidBySource(src)                        -- your own cid lookup
+    print(('zombies today %d | total %d | pvp redzone %d | tags %d | streak %d days | %.2f travelled'):format(
+        exports.rotd_leaderboard:GetZombieKillsPerDay(cid),
+        exports.rotd_leaderboard:GetZombieKillsTotal(cid),
+        exports.rotd_leaderboard:GetPvpKillsRedzone(cid),
+        exports.rotd_leaderboard:GetDogTagsCollected(cid),
+        exports.rotd_leaderboard:GetLongestSurvivalStreak(cid),
+        exports.rotd_leaderboard:GetPlayerDistanceTravel(cid)))
+end, false)
+
+-- unlock a title at 1000 kills (every export returns 0 for unknown players, so no nil check is needed)
+local function hasVeteranTitle(cid)
+    return exports.rotd_leaderboard:GetZombieKillsTotal(cid) >= 1000
+end
+```
+
+<!-- page: rotd_loots | https://lysoon.github.io/rotd_tebexwiki/#/rotd_loots -->
+# rotd_loots
+
+Searchable loot props and containers, plus the "loot sense" scan.
+
+## Client exports: loot sense
+
+Loot sense outlines nearby lootable props for a while (default key `Z`, command `rotd_lootsense`).
+
+#### `TriggerLootSense(silent)`
+
+Triggers a scan. Respects the cooldown.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `silent` | `boolean?` | `true` suppresses the notification. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_loots:TriggerLootSense(true)
+```
+
+
+#### `SetLootSenseBonus(distanceBonus, durationBonus, cooldownScale)`
+
+Changes loot sense for the local player, for example from a skill. Pass `nil` to leave a value unchanged.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `distanceBonus` | `number?` | **Added** to the configured scan distance (meters). |
+| `durationBonus` | `number?` | **Added** to the configured duration (seconds). |
+| `cooldownScale` | `number?` | **Multiplies** the cooldown. `0.5` = half. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+-- a skill that improves loot sense
+exports.rotd_loots:SetLootSenseBonus(15.0, 4.0, 0.5)   -- +15 m, +4 s, half cooldown
+-- remove the bonus
+exports.rotd_loots:SetLootSenseBonus(0.0, 0.0, 1.0)
+```
+
+
+#### `GetLootSenseState()`
+
+**Returns** `table`:
+
+| Field | Type | Description |
+|---|---|---|
+| `active` | `boolean` | A scan is running. |
+| `onCooldown` | `boolean` | Waiting for the cooldown. |
+| `remaining` | `number` | Seconds left (of the scan or the cooldown). |
+| `distance` | `number` | Current scan distance. |
+| `duration` | `number` | Current scan duration. |
+| `cooldown` | `number` | Current cooldown length. |
+
+**Example**
+
+```lua
+local state = exports.rotd_loots:GetLootSenseState()
+if not state.onCooldown then exports.rotd_loots:TriggerLootSense(true) end
+```
+
+
+## Shared export (client and server)
+
+#### `GetAllLootProps()`
+
+Every prop definition from `Config.AlwaysInteractableProps` and `Config.LootSpawns`. Handy for map tools or no-build rules that need every lootable prop position.
+
+**Returns** `table[]`: array of prop definitions.
+
+**Example**
+
+```lua
+local props = exports.rotd_loots:GetAllLootProps()
+print(#props, 'lootable props')
+```
+
+
+## Optional integrations
+
+Containers with a minigame requirement call `rotd-minigame` (`startMinigameSync`), see [[rotd-minigame]].
+
+## Recipes
+
+### Loot sense skill (client)
+
+```lua
+-- apply a bonus while the skill is active, remove it afterwards
+local function setLootSenseSkill(active)
+    if active then
+        exports.rotd_loots:SetLootSenseBonus(15.0, 4.0, 0.5)     -- +15 m, +4 s, half the cooldown
+    else
+        exports.rotd_loots:SetLootSenseBonus(0.0, 0.0, 1.0)      -- back to the config values
+    end
+end
+
+-- auto scan when a skill triggers it
+local state = exports.rotd_loots:GetLootSenseState()
+if not state.onCooldown and not state.active then
+    exports.rotd_loots:TriggerLootSense(true)                    -- silent
+else
+    print(('loot sense ready in %d s'):format(state.remaining))
+end
+```
+
+### Draw your own markers on every lootable prop
+
+```lua
+local props = exports.rotd_loots:GetAllLootProps()
+print(('%d lootable props'):format(#props))
+```
+
+<!-- page: rotd_recyclers | https://lysoon.github.io/rotd_tebexwiki/#/rotd_recyclers -->
+# rotd_recyclers
+
+Scrapping stations. The only exports are notification helpers (**client side**).
+
+> [!NOTE]
+> The resource currently registers `ShowNotification` in two files (`client/client.lua` routes it to the ROTD HUD, `client/notifications.lua` uses `lib.notify`). The one loaded last answers. This will be unified during the multi-framework conversion.
+
+## Client exports
+
+#### `ShowNotification(title, message, type, timeout)`
+
+Shows a notification.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `title` | `string` | Notification title. |
+| `message` | `string` | Notification text. |
+| `type` | `string?` | Notification type. Defaults to `'info'`. |
+| `timeout` | `number?` | Duration in milliseconds. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_recyclers:ShowNotification('Recycler', 'Output ready', 'success', 5000)
+```
+
+
+#### `RemoveNotification(id)`
+
+Removes one custom notification.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string \| number` | Notification id. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_recyclers:RemoveNotification(id)
+```
+
+
+#### `ClearNotifications()`
+
+Clears all custom notifications.
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_recyclers:ClearNotifications()
+```
+
+
+## Recipes
+
+```lua
+-- client: tell the player something in the recycler style
+exports.rotd_recyclers:ShowNotification('Recycler', 'Output ready', 'success', 5000)    -- title, message, type, timeout in ms
+exports.rotd_recyclers:ShowNotification('Recycler', 'Out of fuel', 'error')              -- default timeout
+
+-- clear all of them (leaving a recycler)
+exports.rotd_recyclers:ClearNotifications()
+```
+
+<!-- page: rotd_scavs | https://lysoon.github.io/rotd_tebexwiki/#/rotd_scavs -->
+# rotd_scavs
+
+AI scavenger squads that loot corpses and stashes. Two **server** exports let other systems change what a scav carries. A scav is identified by its **network id** (`netId`, `number`).
+
+## Server exports
+
+#### `GiveToScav(netId, item, amount, metadata)`
+
+Puts an item into a live scav's inventory.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `netId` | `number` | Network id of the scav ped. |
+| `item` | `string` | Item name. |
+| `amount` | `number?` | Amount. Defaults to `1`. |
+| `metadata` | `table?` | Item metadata. |
+
+**Returns** `boolean`: `false` when the netId is not a scav or its stash cannot be created.
+
+**Example**
+
+```lua
+exports.rotd_scavs:GiveToScav(netId, 'bandage', 2)
+```
+
+
+#### `SwapScavWeapon(netId, newWeapon, newAmmo, newMeta)`
+
+Gives a scav a new weapon and moves its old weapon into its inventory. The squad's controlling client is told to re-arm the ped.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `netId` | `number` | Network id of the scav ped. |
+| `newWeapon` | `string` | Weapon name. |
+| `newAmmo` | `number` | Ammo for the new weapon. |
+| `newMeta` | `table` | The **original item metadata**: attachments, durability, serial, tint, so a suppressed scoped rifle stays one. |
+
+**Returns** `string | nil`: the old weapon name, or `nil`.
+
+**Example**
+
+```lua
+local old = exports.rotd_scavs:SwapScavWeapon(netId, 'weapon_carbinerifle', 120, { serial = 'X123' })
+```
+
+
+## Optional integrations
+
+`npc_guide` (kill tracking), the ROTD HUD (notifications) and a zombie resource (`ScavLootedZombie`) are used when running. Each missing partner only disables its own part.
+
+## Recipes
+
+### Make a scav pick up a better weapon (server)
+
+```lua
+-- netId of a scav you got from your own scav events
+local function upgradeScav(netId, weaponName, ammo, metadata)
+    local old = exports.rotd_scavs:SwapScavWeapon(netId, weaponName, ammo, metadata)
+    if old then
+        print('scav now carries', weaponName, 'and stowed', old)
+    else
+        print('not a scav, or it had no weapon')
+    end
+end
+
+-- stock a scav with supplies
+if exports.rotd_scavs:GiveToScav(netId, 'bandage', 2) then
+    print('given')
+else
+    print('netId is not a live scav')
+end
+```
+
+<!-- page: rotd_squad | https://lysoon.github.io/rotd_tebexwiki/#/rotd_squad -->
+# rotd_squad
+
+Squads, reputation, per-player stats and squad building access.
+
+> [!NOTE]
+> **Identifiers.** Some exports take a **server id** (`src`, a `number`), others a **character id** (`cid`, a `string`). The parameter table of every export says which one it wants.
+
+## Server exports
+
+### Squad lookups
+
+#### `GetConfig()`
+
+Returns the squad configuration table the resource is running with.
+
+**Returns** `table`: the squad config.
+
+**Example**
+
+```lua
+local cfg = exports.rotd_squad:GetConfig()
+print(json.encode(cfg))
+```
+
+
+#### `IsSquadMate(srcA, srcB)`
+
+Checks whether two online players are in the same squad.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `srcA` | `number` | Server id of the first player. |
+| `srcB` | `number` | Server id of the second player. |
+
+**Returns** `boolean`: `true` when both players are in the same squad.
+
+**Example**
+
+```lua
+if exports.rotd_squad:IsSquadMate(src, otherSrc) then
+    -- friendly: skip the damage / do not flag as an enemy
+end
+```
+
+
+#### `GetSquadCitizenIds(src)`
+
+Lists the character ids of everyone in the squad of the given player.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of a player in the squad. |
+
+**Returns** `string[]`: array of cids in that player's squad.
+
+**Example**
+
+```lua
+for _, cid in ipairs(exports.rotd_squad:GetSquadCitizenIds(src)) do
+    print('squad member', cid)
+end
+```
+
+
+#### `GetSquadLeaderCid(src)`
+
+Finds the leader of the player's squad.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of a player in the squad. |
+
+**Returns** `string | nil`: the leader's cid, or `nil` when the player has no squad.
+
+**Example**
+
+```lua
+local leader = exports.rotd_squad:GetSquadLeaderCid(src)
+if leader then print('leader is', leader) end
+```
+
+
+#### `GetSquadByCid(cid)`
+
+Returns the full squad table for a character. Only works while the squad is loaded, so **online players only**.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `table | nil`: the squad table, or `nil` when the character has no loaded squad.
+
+**Example**
+
+```lua
+local squad = exports.rotd_squad:GetSquadByCid(cid)
+if squad then print(squad.squadName) end
+```
+
+
+#### `GetSquadIdForCid(cid)`
+
+Returns the squad id a character belongs to. **Works offline.**
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `string | nil`: the squad id, or `nil` when the character is in no squad.
+
+**Example**
+
+```lua
+local squadId = exports.rotd_squad:GetSquadIdForCid(ownerCid)
+```
+
+
+#### `GetAllSquadCitizenIds()`
+
+Lists every character that is in any squad.
+
+**Returns** `string[]`: array of every cid in any squad.
+
+**Example**
+
+```lua
+local all = exports.rotd_squad:GetAllSquadCitizenIds()
+print(('%d players are in a squad'):format(#all))
+```
+
+
+#### `AreCitizenIdsSquadMates(cidA, cidB)`
+
+Cid based version of `IsSquadMate`. **Works offline.** The same cid twice counts as mates.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cidA` | `string` | First character id. |
+| `cidB` | `string` | Second character id. |
+
+**Returns** `boolean`: `true` when both are in the same squad.
+
+**Example**
+
+```lua
+-- base building owner check for an offline owner
+if exports.rotd_squad:AreCitizenIdsSquadMates(ownerCid, builderCid) then
+    -- allow
+end
+```
+
+
+#### `IsInSquad(cid)`
+
+Checks whether a character is in any squad.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if not exports.rotd_squad:IsInSquad(cid) then
+    -- solo player
+end
+```
+
+
+#### `GetSquadMembers(cid)`
+
+Returns the member entries of the squad a character belongs to.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `table[]`: array of member entries, `{}` when the character has no squad.
+
+**Example**
+
+```lua
+local members = exports.rotd_squad:GetSquadMembers(cid)
+print(('squad size: %d'):format(#members))
+```
+
+
+#### `GetSquadStats(srcOrCid)`
+
+Aggregated statistics of a whole squad. Accepts a server id **or** a cid.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `srcOrCid` | `number \| string` | Server id (number) or cid (string) of a squad member. |
+
+**Returns** `table | nil`: `nil` when the player has no squad, otherwise:
+
+| Field | Type | Description |
+|---|---|---|
+| `squadId` | `string` | Squad id. |
+| `squadName` | `string` | Display name of the squad. |
+| `memberCount` | `number` | Members in the squad. |
+| `online` | `number` | Members currently online. |
+| `createdAt` | `number` | Unix timestamp the squad was created. |
+| `avgRep` | `number` | Average reputation of the members. |
+| `avgLevel` | `number` | Average class level of the members. |
+| `totals` | `table` | Summed stats: `zombie_kills`, `player_kills`, `deaths`, `headshots`, `players_healed`, `loot_gathered`, `crafts_made`, `missions_completed`, `vehicles_destroyed`, `structures_destroyed`, `reputation_sum`, `level_sum`. |
+
+**Example**
+
+```lua
+local stats = exports.rotd_squad:GetSquadStats(src)
+if stats then
+    print(stats.squadName, stats.online .. '/' .. stats.memberCount, stats.totals.zombie_kills)
+    -- Wolves  2/4  1280
+end
+```
+
+
+### Reputation and stats
+
+#### `GetPlayerReputation(cid)`
+
+Reads a character's reputation.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `number`: the reputation, or the configured default when unknown.
+
+**Example**
+
+```lua
+local rep = exports.rotd_squad:GetPlayerReputation(cid)
+```
+
+
+#### `ModifyReputation(src, action, customAmount)`
+
+Changes a player's reputation using an action key from the config.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of the player. |
+| `action` | `string` | Action key defined in the squad config. |
+| `customAmount` | `number?` | Optional amount that overrides the configured one. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_squad:ModifyReputation(src, 'help_player')
+exports.rotd_squad:ModifyReputation(src, 'help_player', 25) -- custom amount
+```
+
+
+#### `GetPlayerStats(cid)`
+
+Reads the stat counters of a character.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `table | nil`: the stats table, or `nil` when none exist.
+
+**Example**
+
+```lua
+local stats = exports.rotd_squad:GetPlayerStats(cid)
+if stats then print(stats.zombie_kills) end
+```
+
+
+#### `GetPlayerFullData(cid)`
+
+Reads the complete player record.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `cid` | `string` | Character id. |
+
+**Returns** `table`: the whole record (reputation, stats, squad id, medals, ...).
+
+**Example**
+
+```lua
+local data = exports.rotd_squad:GetPlayerFullData(cid)
+```
+
+
+#### Stat counters
+
+All of these add to one counter of the player. Pick the one that matches what happened.
+
+| Export | Counter | Notes |
+|---|---|---|
+| `AddZombieKill(src, amount)` | `zombie_kills` | `amount` defaults to `1`. Throttled. |
+| `AddPlayerKill(src)` | `player_kills` | |
+| `AddHeadshot(src)` | `headshots` | |
+| `AddHealedPlayer(src, amount)` | `players_healed` | `amount` defaults to `1`. |
+| `AddLoot(src, amount)` | `loot_gathered` | `amount` defaults to `1`. |
+| `AddCraft(src, amount)` | `crafts_made` | `amount` defaults to `1`. |
+| `AddMissionComplete(src)` | `missions_completed` | |
+| `AddVehicleDestroy(src)` | `vehicles_destroyed` | |
+| `AddStructureDestroy(src)` | `structures_destroyed` | |
+| `AddDeath(src)` | `deaths` | |
+
+`src` is always the player's **server id** (`number`). `amount` is an optional `number`.
+
+**Example**
+
+```lua
+exports.rotd_squad:AddZombieKill(src)      -- +1
+exports.rotd_squad:AddLoot(src, 3)         -- +3
+exports.rotd_squad:AddHeadshot(src)
+```
+
+
+#### `AddMedal(src, medal)`
+
+Awards a medal to a player.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of the player. |
+| `medal` | `string` | Medal key. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_squad:AddMedal(src, 'first_blood')
+```
+
+
+#### `AddAchievement(src, achievement)`
+
+Awards an achievement to a player.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of the player. |
+| `achievement` | `string` | Achievement key. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_squad:AddAchievement(src, 'survivor')
+```
+
+
+#### `ShareXp(src, amount)`
+
+Shares an XP amount with the player's squad mates.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of the player who earned the XP. |
+| `amount` | `number` | XP to share. |
+
+**Returns** `table`: the shared result.
+
+**Example**
+
+```lua
+local result = exports.rotd_squad:ShareXp(src, 50)
+```
+
+
+### Building access
+
+#### `HasBuildingAccess(src, buildingId)`
+
+Checks whether the player's squad gives them access to a building.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id of the player. |
+| `buildingId` | `string \| number` | Id of the building. |
+
+**Returns** `boolean`: `true` when the squad grants access.
+
+**Example**
+
+```lua
+if exports.rotd_squad:HasBuildingAccess(src, buildingId) then
+    -- let them in
+end
+```
+
+
+## Client exports
+
+#### `GetSquadData()`
+
+The squad of the local player.
+
+**Returns** `table | nil`: the squad table, `nil` when not in a squad.
+
+**Example**
+
+```lua
+local squad = exports.rotd_squad:GetSquadData()
+```
+
+
+#### `IsInSquad()`
+
+**Returns** `boolean`: whether the local player is in a squad.
+
+**Example**
+
+```lua
+if exports.rotd_squad:IsInSquad() then
+    -- show squad UI
+end
+```
+
+
+#### `GetSquadMembers()`
+
+**Returns** `table[]`: array of members. Each entry has a `source` field (server id).
+
+**Example**
+
+```lua
+for _, m in ipairs(exports.rotd_squad:GetSquadMembers()) do
+    print('member', m.source)
+end
+```
+
+
+#### `GetReputation()`
+
+**Returns** `number`: the local player's reputation.
+
+**Example**
+
+```lua
+local rep = exports.rotd_squad:GetReputation()
+```
+
+
+#### `IsSquadMate(serverId)`
+
+Checks whether another player is in the local player's squad.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `serverId` | `number` | Server id of the other player. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+if exports.rotd_squad:IsSquadMate(GetPlayerServerId(ped)) then
+    -- do not target squad mates
+end
+```
+
+
+#### `CheckBuildingAccess(buildingId, timeoutMs)`
+
+Asks the server whether the local player's squad has access to a building.
+
+> [!WARNING]
+> **Blocking.** Call it from a thread, never from the main frame.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `buildingId` | `string \| number` | Id of the building. |
+| `timeoutMs` | `number?` | How long to wait for the server. Defaults to the config value (5000 ms). |
+
+**Returns** `boolean`: `true` when access is granted, `false` when denied **or** when the request timed out.
+
+**Example**
+
+```lua
+-- client: do not allow raiding squad mates' base
+CreateThread(function()
+    if exports.rotd_squad:CheckBuildingAccess(buildingId) then
+        print('squad has access')
+    end
+end)
+```
+
+
+#### `IsFriendlyFireBlocked()`
+
+**Returns** `boolean`: `true` when friendly fire between squad mates is blocked.
+
+**Example**
+
+```lua
+if exports.rotd_squad:IsFriendlyFireBlocked() then
+    -- cancel damage between squad mates
+end
+```
+
+
+#### `PingAt(coord, pingType)`
+
+Sends a map ping to the whole squad.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coord` | `vector3` | World position to ping. |
+| `pingType` | `string?` | Ping type. Defaults to `'mark'`. |
+
+**Returns** `boolean`: whether the ping was sent.
+
+**Example**
+
+```lua
+exports.rotd_squad:PingAt(GetEntityCoords(PlayerPedId()), 'mark')
+```
+
+
+## Optional integrations
+
+`rotd_squad` shows data from other ROTD resources when they run: class from `rotd_classystem` (`GetPlayerClass`), zombie kills from `rotd_leaderboard` (`GetZombieKillsTotal`), HUD notifications and friends list from the ROTD HUD. Each missing partner only disables its own part.
+
+## Data shapes
+
+### Squad table (`GetSquadByCid`)
+
+```lua
+{
+    id = 'squad_1730000000_4821',
+    leader = 'ABC12345',                 -- cid of the leader
+    name = 'Squad 4821',
+    created = 1730000000,                -- os.time()
+    friendlyFire = false,
+    members = {                          -- stored members
+        { citizenid = 'ABC12345', name = 'John Doe', level = 12, class = 'medic',
+          isLeader = true, joined = 1730000000, reputation = 520 },
+    },
+}
+```
+
+### Member list entry (`GetSquadMembers`, server and client)
+
+```lua
+{
+    citizenid = 'ABC12345',
+    name = 'John Doe',
+    level = 12,
+    class = 'medic',
+    isLeader = true,
+    online = true,
+    source = 14,                         -- server id, nil when offline
+    health = 187,                        -- 0 when offline
+    ping = 32,
+    infection = 0,                       -- 0..11
+    isMedic = true,
+    reputation = 520,
+    reputationColor = '#9ACD32',         -- hex, from the reputation scale
+    color = '#00FF88',                   -- name colour the player chose, nil = default
+    colorRgb = { 0, 255, 136 },
+    icon = nil,                          -- chosen emoji, nil = class icon
+    coords = { x = 215.0, y = -810.0, z = 30.0 },   -- nil when offline
+}
+```
+
+### Stats (`GetPlayerStats`)
+
+```lua
+{
+    zombie_kills = 0, player_kills = 0, deaths = 0, headshots = 0,
+    players_healed = 0, loot_gathered = 0, crafts_made = 0,
+    missions_completed = 0, vehicles_destroyed = 0, structures_destroyed = 0,
+    time_played = 0, distance_traveled = 0, survival_days = 0,
+    medals = {},          -- array of medal keys
+    achievements = {},    -- array of achievement keys
+}
+```
+
+### Reputation
+
+Reputation is a number from `-10000` to `10000`, new players start at `500`. `ModifyReputation(src, action, customAmount)` takes one of these action keys (amounts are in the squad config):
+
+| Action | Change | Action | Change |
+|---|---|---|---|
+| `heal` | +10 | `playerKill` | -100 |
+| `help` | +5 | `vehicleDestroy` | -30 |
+| `zombieKill` | +1 | `baseDestroy` | -100 |
+| `pveAction` | +1 | `baseDamage` | -20 |
+| `loot` | +1 | `steal` | -25 |
+| `craft` | +2 | `manual` | `customAmount` (a number) |
+| `missionComplete` | +10 | | |
+| `achievement` | +15 | | |
+
+Reputation names by value: Saint (9000+), Legend, Hero, Guardian, Sentinel, Protector, Samaritan, Trusted, Friendly (600+), **Neutral (400+, default)**, Suspicious, Shady, Untrusted (0+), Troublemaker, Aggressive, Violent, Hostile, Killer, Butcher, Monster, Demon (-9000 and below).
+
+### `GetPlayerFullData(cid)`
+
+The whole player record: `{ source, citizenid, name, level, class, reputation, stats, squadid, health, isMedic, ... }`. Treat unknown fields as internal.
+
+## Recipes
+
+### No damage between squad mates (server)
+
+```lua
+AddEventHandler('weaponDamageEvent', function(sender, data)
+    local attacker = tonumber(sender)
+    if not attacker or data.hitGlobalId == nil then return end
+
+    local victimEntity = NetworkGetEntityFromNetworkId(data.hitGlobalId)
+    if victimEntity == 0 or not IsPedAPlayer(victimEntity) then return end
+    local victim = NetworkGetEntityOwner(victimEntity)
+
+    if exports.rotd_squad:IsSquadMate(attacker, victim) then
+        CancelEvent()       -- friendly fire off (use the squad's friendlyFire flag if you want it optional)
+    end
+end)
+```
+
+### Reward the whole squad for a mission (server)
+
+```lua
+local function rewardSquad(src)
+    for _, cid in ipairs(exports.rotd_squad:GetSquadCitizenIds(src)) do
+        local member = GetSourceByCid(cid)         -- your own cid -> src lookup
+        if member then
+            exports.rotd_squad:AddMissionComplete(member)
+            exports.rotd_squad:ModifyReputation(member, 'missionComplete')
+        end
+    end
+end
+```
+
+### Penalise griefing (server)
+
+```lua
+AddEventHandler('mybase:server:structureDestroyed', function(destroyerSrc, ownerCid)
+    local destroyerCid = GetCidBySource(destroyerSrc)   -- your own lookup
+    exports.rotd_squad:AddStructureDestroy(destroyerSrc)
+    exports.rotd_squad:ModifyReputation(destroyerSrc, 'baseDestroy')
+
+    -- squad mates of the owner are allowed, even when the owner is offline
+    if exports.rotd_squad:AreCitizenIdsSquadMates(destroyerCid, ownerCid) then
+        exports.rotd_squad:ModifyReputation(destroyerSrc, 'manual', 100)   -- undo the penalty
+    end
+end)
+```
+
+### Door that squad mates may open (server + client)
+
+```lua
+-- server: authoritative
+RegisterNetEvent('mydoors:server:open', function(doorId)
+    local src = source
+    if exports.rotd_squad:HasBuildingAccess(src, doorId) then
+        TriggerClientEvent('mydoors:client:open', src, doorId)
+    end
+end)
+
+-- client: ask first, the export waits for the server (use a thread)
+CreateThread(function()
+    if exports.rotd_squad:CheckBuildingAccess(doorId, 3000) then
+        TriggerServerEvent('mydoors:server:open', doorId)
+    else
+        lib.notify({ description = 'No access', type = 'error' })
+    end
+end)
+```
+
+### Show squad mates on your own HUD (client)
+
+```lua
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if exports.rotd_squad:IsInSquad() then
+            for _, m in ipairs(exports.rotd_squad:GetSquadMembers()) do
+                if m.online and m.coords then
+                    print(m.name, m.health, m.reputationColor)
+                end
+            end
+        end
+    end
+end)
+
+-- ping a location for the squad
+exports.rotd_squad:PingAt(GetEntityCoords(PlayerPedId()), 'mark')
+```
+
+### Read a leaderboard-style summary (server)
+
+```lua
+local stats = exports.rotd_squad:GetSquadStats(src)      -- src (number) or cid (string)
+if stats then
+    print(stats.squadName, stats.memberCount, stats.online, stats.totals.zombie_kills)
+end
+```
+
+<!-- page: rotd_zones | https://lysoon.github.io/rotd_tebexwiki/#/rotd_zones -->
+# rotd_zones
+
+Zones, radiation, resistance, infection hooks and zombie names. Call exports with `exports.rotd_zones:Name(...)` (or `exports['rotd_zones']:Name(...)`).
+
+> [!NOTE]
+> **Side.** The badge on each export tells you where to call it: **client** from a client script, **server** from a server script, **shared** from either.
+> `rotd_zones` depends on no zombie, medical, HUD or sound resource. Anything that needs outside data (zombie names, infection state, cure, cough reactions) is a **registration export** further down.
+
+## Index
+
+| Export | Side | What it does |
+|---|---|---|
+| `GetZones` | client | all zones |
+| `GetZonePlayerin` | client | zone the player is in now |
+| `GetCurrentZone` | client | zone card data for the current zone |
+| `GetZoneAtCoords` | shared | zone at a position |
+| `GetZoneInfoAtCoords` | shared | full zone info at a position |
+| `GetZoneSpawnInfoAtCoords` | client | spawn info (classes, peds, multipliers) |
+| `CheckCoordsZoneType` | client | zone type for a ped |
+| `CheckCoordsZoneTypeCoords` | client | zone summary at a position |
+| `CheckCoordsZoneTypeCoordsRules` | shared | rules at a position |
+| `IsCoordsInGreenZone` | server | safezone test |
+| `IsBaseBuildingAllowedAtCoords` | server | base building rule at a position |
+| `GetZoneExtraLoot` | server | extra loot of a zombie class in a zone |
+| `CanBuildAtCoords`, `GetNoBuildMessage`, `GetNoBuildInfo`, `IsNoBuildReady` | client | no-build gate near blips / POIs |
+| `AddRadiation`, `SetRadiation`, `GetSufferedRadiation`, `GetRadiationDebuffs`, `GetRadiationInfo`, `RadiationZone` | client | radiation dose |
+| `GetRadiationResistance`, `AddResistanceModifier`, `RemoveResistanceModifier` | client | radiation resistance |
+| `SetPlayerRadiation`, `AddPlayerRadiation`, `GetPlayerRadiation` | server | radiation from server code |
+| `RegisterInfectionDetector`, `SetInfectionState` | client | tell the guards a player is infected |
+| `RegisterInfectionCure` | server | cure handler for the guard cure |
+| `RegisterZombieLabels`, `RegisterZombieLabel`, `GetZombieLabels` | client | zombie names on zone cards |
+| `RegisterCoughHandler` | client | react to the player coughing |
+| `IsNightTime`, `SetGlobalWeatherAmbient`, `SetGlobalWeatherPostFX` | client | day/night and weather layers |
+| `RebuildMapOverlays` | client | redraw the map zone overlays |
+
+## Zones (client)
+
+#### `GetZones()`
+
+Lists every zone that was created. The objects are internal and **read only**.
+
+**Returns** `table`: every created zone.
+
+**Example**
+
+```lua
+for _, zone in pairs(exports.rotd_zones:GetZones()) do
+    -- inspect only, do not modify
+end
+```
+
+
+#### `GetZonePlayerin()`
+
+The zone the local player is standing in right now.
+
+**Returns** `table`: `{ key, name, zombie_intensity, type, rules }`. Outside any zone the result has `name = 'None'`, `type = 'None'` and the default rules.
+
+**Example**
+
+```lua
+local zone = exports.rotd_zones:GetZonePlayerin()
+print(zone.name, zone.type) -- e.g. "Fort Zancudo", "red"
+```
+
+
+#### `GetCurrentZone()`
+
+The data the zone card displays for the current zone.
+
+**Returns** `table | nil`: `{ zoneData = {...}, sufferedRadiation, displaySettings }`, or `nil` outside zones.
+
+**Example**
+
+```lua
+local card = exports.rotd_zones:GetCurrentZone()
+if card then print('radiation dose', card.sufferedRadiation) end
+```
+
+
+#### `GetZoneSpawnInfoAtCoords(coords)`
+
+Spawn information for a zombie spawner: which classes may spawn and which ped models each class uses. Loot is deliberately **not** included, see `GetZoneExtraLoot`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position to look up. |
+
+**Returns** `table | nil`: `{ key, name, type, intensity, classes, peds, noSleep, damageMult, healthMult, armorAdd }`.
+
+**Example**
+
+```lua
+local info = exports.rotd_zones:GetZoneSpawnInfoAtCoords(GetEntityCoords(PlayerPedId()))
+if info then
+    for _, class in ipairs(info.classes) do print('may spawn', class) end
+end
+```
+
+
+#### `CheckCoordsZoneType(ped)`
+
+Zone type for a ped.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `ped` | `number` | Ped entity handle. |
+
+**Returns** `string | false`: the zone type (`'red'`, `'yellow'`, `'green'`, `'radiation'`, ...) or `false` outside zones.
+
+**Example**
+
+```lua
+if exports.rotd_zones:CheckCoordsZoneType(PlayerPedId()) == 'green' then
+    -- safezone
+end
+```
+
+
+#### `CheckCoordsZoneTypeCoords(coords)`
+
+Short zone summary at a position.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position to look up. |
+
+**Returns** `table | false`: `{ key, name, type, rules, intensity }`, or `false` outside zones.
+
+**Example**
+
+```lua
+local z = exports.rotd_zones:CheckCoordsZoneTypeCoords(coords)
+if z then print(z.name, z.intensity) end
+```
+
+
+## Zones (shared)
+
+Available on both the client and the server.
+
+#### `GetZoneAtCoords(coords)`
+
+Finds the zone at a position. When zones overlap, the one with the highest priority wins.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3 \| table` | Position. A table with `x` and `y` also works. |
+
+**Returns** `table | nil`: `{ key, name, type, rules, intensity, priority }`, or `nil` when no zone matches.
+
+**Example**
+
+```lua
+local zone = exports.rotd_zones:GetZoneAtCoords(vector3(215.0, -810.0, 30.0))
+if zone then print(zone.name, zone.priority) end
+```
+
+
+#### `GetZoneInfoAtCoords(coords)`
+
+Full zone info including the polygon data. The returned fields differ per side.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3 \| table` | Position. |
+
+**Returns** `table | nil`:
+
+| Side | Fields |
+|---|---|
+| client | `name`, `type`, `rules`, `intensity`, `zombie_classes`, `dimensions`, `points2D`, `points3D` |
+| server | `key`, `name`, `type`, `rules`, `intensity`, `dimensions`, `points2D` |
+
+**Example**
+
+```lua
+local info = exports.rotd_zones:GetZoneInfoAtCoords(coords)
+if info then print(#info.points2D, 'polygon points') end
+```
+
+
+#### `CheckCoordsZoneTypeCoordsRules(coords)`
+
+The rules that apply at a position, or the defaults outside any zone.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** `table`: booleans `baseBuilding`, `baseRaiding`, `PvP`, `Weapons`, `blackout`, plus any key you add in the config.
+
+**Example**
+
+```lua
+local rules = exports.rotd_zones:CheckCoordsZoneTypeCoordsRules(GetEntityCoords(PlayerPedId()))
+if not rules.baseBuilding then print('no building here') end
+```
+
+
+## Zones (server)
+
+#### `IsCoordsInGreenZone(coords)`
+
+Safezone test.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** `boolean`: `true` when the position is inside a green zone.
+
+**Example**
+
+```lua
+local isGreen = exports.rotd_zones:IsCoordsInGreenZone(GetEntityCoords(GetPlayerPed(src)))
+```
+
+
+#### `IsBaseBuildingAllowedAtCoords(coords)`
+
+Whether the zone at a position allows base building.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** three values:
+
+| Position | Type | Description |
+|---|---|---|
+| 1 | `boolean` | `true` when building is allowed. |
+| 2 | `string \| nil` | Zone name. |
+| 3 | `string \| nil` | Zone key. |
+
+**Example**
+
+```lua
+local allowed, zoneName = exports.rotd_zones:IsBaseBuildingAllowedAtCoords(coords)
+if not allowed then print('blocked by', zoneName) end
+```
+
+
+#### `GetZoneExtraLoot(zoneKey, class)`
+
+Extra loot a zombie class drops in a zone. Server only so clients cannot touch loot.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `zoneKey` | `string` | Key in `Config.Zones`. |
+| `class` | `string` | Zombie class key. |
+
+**Returns** `table | nil`: the `extraloot` list of that class in that zone.
+
+**Example**
+
+```lua
+local loot = exports.rotd_zones:GetZoneExtraLoot('fort_zancudo', 'military_tank')
+```
+
+
+## No-build gate (client)
+
+Base building is blocked near `rotd_blips` landmarks and POIs. Radii come from `Config.NoBuild`.
+
+#### `CanBuildAtCoords(coords)`
+
+Checks whether building is allowed at a position.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** three values:
+
+| Position | Type | Description |
+|---|---|---|
+| 1 | `boolean` | `true` when building is allowed. |
+| 2 | `string \| nil` | Block reason: `'blip'` or `'poi'`. |
+| 3 | `number \| nil` | Distance to the blocking point. |
+
+**Example**
+
+```lua
+local ok, reason, dist = exports.rotd_zones:CanBuildAtCoords(coords)
+if not ok then print('blocked by', reason, dist) end
+```
+
+
+#### `GetNoBuildMessage(reason)`
+
+Player-facing text for a block reason.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `reason` | `string` | `'blip'` or `'poi'`. |
+
+**Returns** `string`: the text from `Config.NoBuild.Messages`.
+
+**Example**
+
+```lua
+local _, reason = exports.rotd_zones:CanBuildAtCoords(coords)
+if reason then print(exports.rotd_zones:GetNoBuildMessage(reason)) end
+```
+
+
+#### `GetNoBuildInfo(coords)`
+
+Everything about the no-build check in one table.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `coords` | `vector3` | Position. |
+
+**Returns** `table`: `{ allowed, reason, distance, message }`.
+
+**Example**
+
+```lua
+local info = exports.rotd_zones:GetNoBuildInfo(coords)
+if not info.allowed then print(info.message) end
+```
+
+
+#### `IsNoBuildReady()`
+
+**Returns** `boolean`: `true` once the point index is built. Wait for it before relying on the other no-build exports.
+
+**Example**
+
+```lua
+while not exports.rotd_zones:IsNoBuildReady() do Wait(250) end
+```
+
+
+## Radiation (client)
+
+The dose is a number from `0` up (the indicator treats `2500` as full). It lives on the player's client.
+
+#### `AddRadiation(amount, applyResist, pierce)`
+
+Adds a dose. Use this for doses coming from other resources: it applies resistance for you and is safe next to the zone and decay loops (it adds a delta).
+
+| Parameter | Type | Description |
+|---|---|---|
+| `amount` | `number` | Dose to add. Ignored when `0` or less. |
+| `applyResist` | `boolean?` | `false` ignores clothing resistance. Default applies it. |
+| `pierce` | `number?` | `0` to `1`, the share of the resistance this dose ignores. `0.3` means a 20% resistance only resists 14%. |
+
+**Returns** `number`: the new total dose.
+
+**Example**
+
+```lua
+exports.rotd_zones:AddRadiation(25.0)             -- resisted by clothing
+exports.rotd_zones:AddRadiation(25.0, false)      -- raw dose, ignores resistance
+exports.rotd_zones:AddRadiation(25.0, true, 0.3)  -- a bite: ignores 30% of the resistance
+```
+
+
+#### `SetRadiation(value)`
+
+Sets the absolute dose. For cures and admin tools.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `value` | `number` | The new dose. |
+
+**Returns** `number`: the dose after the change.
+
+**Example**
+
+```lua
+exports.rotd_zones:SetRadiation(0) -- fully cured
+```
+
+
+#### `GetSufferedRadiation()`
+
+**Returns** `number`: the current dose.
+
+**Example**
+
+```lua
+if exports.rotd_zones:GetSufferedRadiation() > 1000 then
+    -- heavily irradiated
+end
+```
+
+
+#### `GetRadiationInfo()`
+
+**Returns** `table`: `{ dose, resistance, inRadiationZone, maxHealth, maxStamina }`.
+
+**Example**
+
+```lua
+local info = exports.rotd_zones:GetRadiationInfo()
+print(info.dose, info.resistance, info.inRadiationZone)
+```
+
+
+#### `GetRadiationDebuffs()`
+
+**Returns** `table`: `{ maxhealth, maxstamina }`, the limits of the current radiation tier.
+
+**Example**
+
+```lua
+local d = exports.rotd_zones:GetRadiationDebuffs()
+print(d.maxhealth, d.maxstamina)
+```
+
+
+#### `RadiationZone(inside, zonedata)`
+
+> [!NOTE]
+> **Internal.** Starts or stops the zone dose loop. The zone detection calls it, you normally never do.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `inside` | `boolean` | Whether the player is inside a radiation zone. |
+| `zonedata` | `table` | The zone data. |
+
+**Returns** nothing.
+
+#### `GetRadiationResistance()`
+
+Resistance is a percentage (`0` to `100`). It comes from worn clothing (`Config.RadiationResistance.clothing`, entries saved by `/setradcloth`, inventory items with `metadata.radiationResistance`) plus the modifiers below.
+
+**Returns** `number`: `0` up to `Config.RadiationResistance.cap`.
+
+**Example**
+
+```lua
+print(('resisting %d%%'):format(exports.rotd_zones:GetRadiationResistance()))
+```
+
+
+#### `AddResistanceModifier(id, percent, label)`
+
+Adds a temporary resistance bonus. It counts like a clothing slot: summed with the rest and capped.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string` | Any id you choose. Using the same id again replaces its value. |
+| `percent` | `number` | Resistance in percent. |
+| `label` | `string` | Name shown in the resistance notification. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+-- an anti-radiation pill: +30% for 5 minutes
+exports.rotd_zones:AddResistanceModifier('antirad_pill', 30, 'Anti-Rad Pill')
+SetTimeout(5 * 60000, function() exports.rotd_zones:RemoveResistanceModifier('antirad_pill') end)
+```
+
+
+#### `RemoveResistanceModifier(id)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string` | The id used in `AddResistanceModifier`. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_zones:RemoveResistanceModifier('antirad_pill')
+```
+
+
+## Radiation (server)
+
+#### `SetPlayerRadiation(src, value)`
+
+Sets the dose on that player's client.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `value` | `number` | The new dose. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_zones:SetPlayerRadiation(src, 0)
+```
+
+
+#### `AddPlayerRadiation(src, amount, applyResistance, pierce)`
+
+Adds a dose to a player. Resistance is applied unless `applyResistance == false`.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+| `amount` | `number` | Dose to add. |
+| `applyResistance` | `boolean?` | `false` ignores resistance. |
+| `pierce` | `number?` | `0` to `1`, share of resistance ignored. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_zones:AddPlayerRadiation(src, 120.0) -- e.g. a grenade
+```
+
+
+#### `GetPlayerRadiation(src)`
+
+The last dose the client saved. It is saved every few minutes, on logout and on resource stop, so it can **lag behind**. Stored in `charinfo.radiation` on QB/Qbox and in `rotd_player_data` on ESX.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `src` | `number` | Server id. |
+
+**Returns** `number`: the last saved dose.
+
+**Example**
+
+```lua
+local saved = exports.rotd_zones:GetPlayerRadiation(src)
+```
+
+
+## Infection and guards (client)
+
+Guard NPCs in green zones can detect, investigate and cure infected players. `rotd_zones` does not track infection itself. The medical/disease resource connects it with **one detection export (client)** and **one cure export (server)**. With neither registered the guard infection checks simply never trigger.
+
+Use **one** of the two detection exports.
+
+#### `RegisterInfectionDetector(fn)`
+
+Registers a function that is called about once a second. Errors inside `fn` are ignored.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `fn` | `function` | Returns the infection state table described below. |
+
+`fn` returns:
+
+| Field | Type | Description |
+|---|---|---|
+| `infected` | `boolean` | Whether the player is infected. |
+| `level` | `number` | Infection level, `0` = none. Guards escalate with the level (an escort joins at `7` and up). |
+| `immune` | `boolean` | Immune players are ignored. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+-- client (wasabi_ambulance example)
+exports.rotd_zones:RegisterInfectionDetector(function()
+    return {
+        infected = exports.wasabi_ambulance:IsInfected() and true or false,
+        level    = exports.wasabi_ambulance:GetInfectionLevel() or 0,
+        immune   = exports.wasabi_ambulance:IsImmune() and true or false,
+    }
+end)
+```
+
+
+> [!TIP]
+> Register again in the client event `rotd_zones:ready` so a restart of `rotd_zones` does not lose the registration.
+
+#### `SetInfectionState(state)`
+
+Push-style alternative: send the same table whenever it changes.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `state` | `table` | `{ infected, level, immune }`, same as above. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_zones:SetInfectionState({ infected = true, level = 4, immune = false })
+```
+
+
+## Infection cure (server)
+
+#### `RegisterInfectionCure(fn)`
+
+Registers the handler that runs when a guard finishes curing a player. Requests are limited to one per 20 seconds per player. Afterwards the player's client is told to clear any pushed infection state. The server event `rotd_zones:infectionCured` (`src`) also fires, for resources that prefer events.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `fn` | `function` | `fn(src)`, called with the cured player's server id. |
+
+**Returns** `number`: how many handlers are registered.
+
+**Example**
+
+```lua
+-- server
+exports.rotd_zones:RegisterInfectionCure(function(src)
+    exports.wasabi_ambulance:CureInfection(src)
+end)
+```
+
+
+## Zombie names on zone cards (client)
+
+Zone cards show player-facing names instead of class keys such as `military_tank`. The map is `class id -> display name`:
+
+```lua
+-- key   = class id used in a zone's zombie_classes list (Config.Zones[...].zombie_classes)
+-- value = the name the player sees
+{
+    normal        = 'Walker',
+    sprinter      = 'Runner',
+    military_tank = 'Juggernaut',
+    rad_beamer    = 'Radiation Beamer',
+}
+```
+
+A class without a name shows its key in Title Case. Static names can also go in `Config.ZombieLabels`.
+
+#### `RegisterZombieLabels(map)`
+
+Registers many names at once. Existing keys are overwritten, others kept.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `map` | `table` | `{ [classKey] = 'Display name' }`. |
+
+**Returns** `number`: how many entries were accepted.
+
+**Example**
+
+```lua
+exports.rotd_zones:RegisterZombieLabels({ normal = 'Walker', sprinter = 'Runner' })
+```
+
+
+#### `RegisterZombieLabel(class, label)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `class` | `string` | Class key. |
+| `label` | `string` | Display name. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.rotd_zones:RegisterZombieLabel('military_tank', 'Juggernaut')
+```
+
+
+#### `GetZombieLabels()`
+
+**Returns** `table`: a copy of the label table.
+
+**Example**
+
+```lua
+local labels = exports.rotd_zones:GetZombieLabels()
+print(labels.normal)
+```
+
+
+## Cough (client)
+
+When radiation makes the player cough, other resources can react (for example zombies hear it). The client event `rotd_zones:cough` carries `coords` (`vector3`).
+
+#### `RegisterCoughHandler(callback)`
+
+| Parameter | Type | Description |
+|---|---|---|
+| `callback` | `function` | `callback(coords)` runs on every cough. Errors are ignored. |
+
+**Returns** `number`: how many handlers are registered.
+
+**Example**
+
+```lua
+exports.rotd_zones:RegisterCoughHandler(function(coords)
+    print('cough at', coords)
+end)
+```
+
+
+## Environment (client)
+
+#### `IsNightTime()`
+
+**Returns** `boolean`: `true` from 20:00 to 06:00 game time.
+
+**Example**
+
+```lua
+if exports.rotd_zones:IsNightTime() then
+    -- night behaviour
+end
+```
+
+
+#### `SetGlobalWeatherAmbient(mod, instant)`
+
+Sets the map-wide timecycle layer. A zone's own ambient wins over it.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `mod` | `string \| nil` | Timecycle modifier name, or `nil` to clear. |
+| `instant` | `boolean?` | `true` skips the cross-fade. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_zones:SetGlobalWeatherAmbient('REDMIST', false)
+exports.rotd_zones:SetGlobalWeatherAmbient(nil)  -- clear
+```
+
+
+#### `SetGlobalWeatherPostFX(list)`
+
+Replaces the map-wide post FX set. Effects no longer listed are stopped. Radiation effects are never touched.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `list` | `string[]` | Array of effect names. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_zones:SetGlobalWeatherPostFX({ 'DrugsMichaelAliensFight' })
+```
+
+
+#### `RebuildMapOverlays()`
+
+Redraws every zone's map overlay from `Config.Zones`. Call it after changing zones at runtime.
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.rotd_zones:RebuildMapOverlays()
+```
+
+
+## Events
+
+| Event | Side | Payload | When |
+|---|---|---|---|
+| `rotd_zones:ready` | client | none | `rotd_zones` has started (register names, detectors here) |
+| `rotd_zones:enteredZone` | client | `{ key, name, type, rules }` | player enters a zone |
+| `rotd_zones:exitedZone` | client | `{ key, name, type }` | player leaves all zones |
+| `rotd_zones:cough` | client | `coords` | radiation cough |
+| `rotd_zones:infectionCured` | server | `src` | a guard cured a player |
+| `rotd_zones:setradiation` | client | `value` | server sets the dose (used by `SetPlayerRadiation`) |
+| `rotd_zones:addradiation` | client | `amount, applyResist, pierce` | server adds a dose (used by `AddPlayerRadiation`) |
+
+```lua
+-- client: react to zones
+AddEventHandler('rotd_zones:enteredZone', function(zone)
+    print('entered', zone.name, zone.type, zone.rules.PvP)
+end)
+AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
+```
+
+> [!CAUTION]
+> **Compatibility note.** The net event `rotd_zones:setradiation` (server) from older versions still exists and lets any client set another player's radiation. Prefer the server exports above; the event is kept only for compatibility.
+
+## Commands
+
+| Command | Who | What |
+|---|---|---|
+| `/radiation` | everyone | shows your dose (and resistance) |
+| `/setradiation [id] <level>` | admin | sets a player's dose (0 to 2500) |
+| `/setradcloth ...` | admin | saves what you wear as radiation clothing (`list`, `remove`, see `Config.RadiationResistance`) |
+| `+zone_details` (key mapping, Left Alt) | everyone | zone detail card |
+
+## Configuration pointers
+
+`config.lua`: `Config.Zones`, `Config.ZoneUI` (built-in zone UI: `builtin`, `builtinStyle`, `showHint`), `Config.RadiationUI` (indicator style, position, `showResistance`), `Config.RadiationDamageFX`, `Config.RadiationDamageScale`, `Config.RadiationResistance`, `Config.ZombieLabels`, `Config.NoBuild`, `Config.Sounds`.
+
+## Data shapes
+
+### Zone types
+
+`'red'`, `'yellow'`, `'orange'`, `'green'` (safezone), `'radiation'`, `'death'`, `'white'`, `'gray'`, `'cyan'`.
+
+### Rules table
+
+```lua
+{ baseBuilding = true, baseRaiding = true, PvP = true, Weapons = true, blackout = false }   -- booleans
+-- outside any zone the default rules are returned (every rule true on the client)
+```
+
+### Zone info (`GetZoneAtCoords`)
+
+```lua
+{ key = 'AirportSafeZone', name = 'Airport Safe Zone', type = 'green', rules = { ... }, intensity = 0.0, priority = 10 }   -- key = the Config.Zones table key
+```
+
+### Spawn info (`GetZoneSpawnInfoAtCoords`, client)
+
+```lua
+{
+    key = '<Config.Zones key>', name = 'Military Base', type = 'red', intensity = 5.0,
+    classes = { 'normal', 'tank', 'shunter' },                 -- allowed zombie classes
+    peds = { normal = { `a_m_m_skater_01` }, tank = { ... } }, -- ped models per class
+    noSleep = false, damageMult = 1.8, healthMult = 2.5, armorAdd = 25,
+}
+```
+
+### Zone card data (`GetCurrentZone`, client)
+
+```lua
+{
+    zoneData = {
+        name = 'Military Base', type = 'red', zombie_intensity = 5.0,
+        zombie_classes = { 'normal', 'tank' }, zombie_class_labels = { 'Walker', 'Juggernaut' },
+        zombie_damage_mult = 1.8, zombie_health_mult = 2.5, zombie_armor_add = 25,
+        rules = { ... }, radiation = nil,       -- radiation = dose, only in radiation zones
+    },
+    sufferedRadiation = 340,                    -- nil when 0
+    displaySettings = { showName = true, showType = true, ... },   -- Config.ZoneUI
+}
+```
+
+### `GetRadiationInfo` (client)
+
+```lua
+{ dose = 340.5, resistance = 35, inRadiationZone = true, maxHealth = 180, maxStamina = 0.9 }
+```
+
+### Radiation clothing entry (`Config.RadiationResistance.clothing`, also `data/radiation_clothing.json`)
+
+```lua
+{ slot = 'mask', drawable = 175, texture = nil, gender = nil, res = 5, label = 'Dust Filtered Mask' }
+--  slot      mask | hat | glasses | ear | torso | jacket | tshirt | pants | hands | shoes | vest | accessory | decals | bag | watch | bracelet
+--            (or comp = <component id> / prop = <prop id> instead of slot)
+--  drawable  number or { numbers };  texture  number, { numbers } or nil = any;  gender  0 male / 1 female / nil = both
+```
+
+### Infection detector result
+
+```lua
+{ infected = true, level = 4, immune = false }    -- level 0 = none; an escort guard joins at level 7 and up
+```
+
+## Recipes
+
+### Radiation grenade (server + client)
+
+```lua
+-- server: irradiate everyone inside 15 m
+local function radiationBlast(coords)
+    for _, playerId in ipairs(GetPlayers()) do
+        local src = tonumber(playerId)
+        local ped = GetPlayerPed(src)
+        if #(GetEntityCoords(ped) - coords) < 15.0 then
+            exports.rotd_zones:AddPlayerRadiation(src, 150.0)          -- resistance is applied on the client
+        end
+    end
+end
+
+-- client: a bite that slips through the suit (ignores 30% of the resistance)
+exports.rotd_zones:AddRadiation(40.0, true, 0.3)
+```
+
+### Anti-radiation pill (client)
+
+```lua
+RegisterNetEvent('mypills:client:antirad', function()
+    exports.rotd_zones:AddResistanceModifier('antirad_pill', 30, 'Anti-Rad Pill')
+    SetTimeout(5 * 60000, function()
+        exports.rotd_zones:RemoveResistanceModifier('antirad_pill')
+    end)
+end)
+
+-- cure item: remove the dose
+RegisterNetEvent('mypills:client:radaway', function()
+    exports.rotd_zones:SetRadiation(0.0)
+end)
+```
+
+### React to zones (client)
+
+```lua
+AddEventHandler('rotd_zones:enteredZone', function(zone)
+    if zone.type == 'green' then
+        print('safezone, weapons allowed:', zone.rules.Weapons)
+    end
+end)
+AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
+
+-- the zone the player is in right now
+local zone = exports.rotd_zones:GetZonePlayerin()          -- zone.type == 'None' outside every zone
+```
+
+### Base building checks
+
+```lua
+-- server (authoritative)
+RegisterNetEvent('mybase:server:place', function(coords)
+    local src = source
+    local allowed, zoneName = exports.rotd_zones:IsBaseBuildingAllowedAtCoords(coords)
+    if not allowed then
+        TriggerClientEvent('ox_lib:notify', src, { type = 'error', description = ('No building in %s'):format(zoneName or 'this zone') })
+        return
+    end
+    -- place it
+end)
+
+-- client (for a nice preview colour)
+local ok, reason, distance = exports.rotd_zones:CanBuildAtCoords(GetEntityCoords(PlayerPedId()))
+if not ok then print(exports.rotd_zones:GetNoBuildMessage(reason)) end
+```
+
+### Connect a disease resource (infection guards)
+
+```lua
+-- client: the guards read this about once a second
+exports.rotd_zones:RegisterInfectionDetector(function()
+    local lvl = MyDisease.GetLevel()                       -- your own function
+    return { infected = lvl > 0, level = lvl, immune = MyDisease.IsImmune() }
+end)
+
+-- server: the guard cured the player
+exports.rotd_zones:RegisterInfectionCure(function(src)
+    MyDisease.Cure(src)                                    -- your own function
+end)
+
+-- keep it registered after a restart of rotd_zones
+AddEventHandler('rotd_zones:ready', function()
+    exports.rotd_zones:RegisterInfectionDetector(function() ... end)
+end)
+```
+
+### Register zombie names and react to coughs (client)
+
+```lua
+local function register()
+    exports.rotd_zones:RegisterZombieLabels({
+        normal = 'Walker', sprinter = 'Runner', tank = 'Juggernaut',
+        military_tank = 'Military Juggernaut', rad_beamer = 'Radiation Beamer',
+    })
+    exports.rotd_zones:RegisterCoughHandler(function(coords)
+        -- make noise at coords for your zombie AI
+    end)
+end
+AddEventHandler('rotd_zones:ready', register)
+CreateThread(function() Wait(1000) register() end)   -- in case rotd_zones started first
+```
+
+### Night-aware events
+
+```lua
+if exports.rotd_zones:IsNightTime() then
+    -- spawn the night variant
+end
+```
+
+<!-- page: rotd-minigame | https://lysoon.github.io/rotd_tebexwiki/#/rotd-minigame -->
+# rotd-minigame
+
+Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire splice and more. **Client side only.**
+
+**Types:** `lockpick`, `keypad_matrix`, `keypad_wave`, `safedial`, `wiresplice`, `crowbar`, `fusebox`, `lever`, `valve`, `floorboard`, `repairpanel`, `cablecut`, `nutsbolts`, `bite_dodge`, `struggle`, `syringe`, `hotwire`, `cutting`.
+
+**Difficulty** is `1` to `7`.
+
+## Client exports
+
+#### `startMinigameSync(type, difficulty, timeLimit)`
+
+Blocks the calling thread until the minigame ends.
+
+> [!WARNING]
+> **Must run in a thread** (`CreateThread`, a command handler, an event handler), never at the top level of a file.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `type` | `string` | One of the types above. |
+| `difficulty` | `number` | `1` to `7`. |
+| `timeLimit` | `number?` | Seconds. Omitted or `0` means no time limit. |
+
+**Returns** three values:
+
+| Position | Type | Description |
+|---|---|---|
+| 1 | `boolean` | `success`. |
+| 2 | `string` | `reason`, e.g. `'timeout'`, `'died'`, `'failed'`, `'busy'`. |
+| 3 | `string \| nil` | `stage`: the stage it ended on, for multi-stage games. |
+
+A game rejected because another one is active, or because the type is invalid, returns `false, 'busy'`. Dying or being downed during the game ends it as a loss (`'died'`, no fail lockout).
+
+**Example**
+
+```lua
+CreateThread(function()
+    local ok, reason = exports['rotd-minigame']:startMinigameSync('lockpick', 4, 30)
+    if ok then
+        print('door open')
+    else
+        print('failed:', reason)
+    end
+end)
+```
+
+
+#### `startMinigame(type, difficulty, timeLimit, callback)`
+
+Non-blocking version. `(type, difficulty, callback)` also works.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `type` | `string` | One of the types above. |
+| `difficulty` | `number` | `1` to `7`. |
+| `timeLimit` | `number?` | Seconds. Omitted or `0` means no time limit. |
+| `callback` | `function` | `callback(success, reason, stage)`, fires when the game ends. |
+
+**Returns** `boolean`: `true` when accepted, `false` when busy or invalid. The callback fires later.
+
+**Example**
+
+```lua
+exports['rotd-minigame']:startMinigame('syringe', 3, 20, function(success, reason, stage)
+    print(success, reason, stage)
+end)
+```
+
+
+## Side effects worth knowing
+
+- Items needed for a type (lockpicks, etc.) are consumed through the resource's own server events according to its config (`consumeOnFail`, `consumeOnFailChance`).
+- On **success**, the resource reports the minigame to `npc_guide` (`TrackMinigame`) when that resource runs, and pays XP to the ROTD HUD when it runs. Both are optional.
+
+## Recipes
+
+### A lock that needs a lockpick minigame (client)
+
+```lua
+local function tryOpenDoor(doorId)
+    CreateThread(function()
+        local ok, reason = exports['rotd-minigame']:startMinigameSync('lockpick', 4, 30)
+        if ok then
+            TriggerServerEvent('mydoors:server:unlock', doorId)
+        elseif reason == 'busy' then
+            lib.notify({ description = 'Finish what you are doing first', type = 'error' })
+        elseif reason == 'timeout' then
+            lib.notify({ description = 'Too slow', type = 'error' })
+        else
+            lib.notify({ description = 'The lock held', type = 'error' })   -- 'failed', 'died', ...
+        end
+    end)
+end
+```
+
+### Several stages in a row (client)
+
+```lua
+CreateThread(function()
+    local ok = exports['rotd-minigame']:startMinigameSync('wiresplice', 3)        -- no time limit
+    if not ok then return end
+    ok = exports['rotd-minigame']:startMinigameSync('keypad_matrix', 4, 25)
+    if ok then print('vault open') end
+end)
+```
+
+### Callback style, no thread needed (client)
+
+```lua
+exports['rotd-minigame']:startMinigame('syringe', 3, 20, function(success, reason, stage)
+    if success then print('injected') else print('failed at', stage or '?', reason) end
+end)
+```
+
+<!-- page: Small-Exports | https://lysoon.github.io/rotd_tebexwiki/#/Small-Exports -->
+# Small exports
+
+## rotd_events
+
+### Server exports
+
+#### `GetActiveVehicles()`
+
+Lists the vehicles the event system currently owns. Used by `vehicle_spawner` so its cleanup sweep leaves them alone.
+
+**Returns** `number[]`: entity handles of the helicopter and ground vehicle the event system owns.
+
+**Example**
+
+```lua
+local vehicles = exports.rotd_events:GetActiveVehicles()
+```
+
+
+## rotd_mystery_merchant
+
+### Server exports
+
+#### `GetActiveVehicles()`
+
+**Returns** `table`: `{ vehicle }` for the merchant's current vehicle, or `{}` when none.
+
+**Example**
+
+```lua
+-- keep other resources' vehicles out of your own cleanup
+local keep = {}
+for _, res in ipairs({ 'rotd_events', 'rotd_mystery_merchant' }) do
+    if GetResourceState(res) == 'started' then
+        for _, veh in ipairs(exports[res]:GetActiveVehicles()) do keep[veh] = true end
+    end
+end
+```
+
+
+<!-- page: vehicle_spawner | https://lysoon.github.io/rotd_tebexwiki/#/vehicle_spawner -->
+# vehicle_spawner
+
+World vehicles, damage and parts. Exports for event scripts, garages and zombie systems.
+
+## Server exports
+
+#### `ProtectVehicle(vehOrNetId, protect)`
+
+Marks a vehicle as protected from the cleanup sweep. Same as setting the protection state bag, without needing to know its name.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `vehOrNetId` | `number` | Entity handle **or** network id. |
+| `protect` | `boolean` | `true` protects, `false` releases. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.vehicle_spawner:ProtectVehicle(vehicle, true)    -- event vehicle: keep it
+exports.vehicle_spawner:ProtectVehicle(vehicle, false)   -- release it
+```
+
+
+#### `GetNextCleanup()`
+
+**Returns** `number | nil`: seconds until the next cleanup sweep, `nil` when none is scheduled.
+
+**Example**
+
+```lua
+local secs = exports.vehicle_spawner:GetNextCleanup()
+if secs and secs < 60 then print('cleanup soon') end
+```
+
+
+#### `PersistVehicleParts(netId, plate)`
+
+Writes the in-memory parts of an **owned** vehicle (battery, ecu, transmission, ...) to the database. Call it right **before** a garage deletes a stored vehicle so the latest durability is not lost.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `netId` | `number` | Network id of the vehicle. |
+| `plate` | `string` | Vehicle plate. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.vehicle_spawner:PersistVehicleParts(netId, plate)
+DeleteEntity(NetworkGetEntityFromNetworkId(netId))
+```
+
+
+#### `RestoreVehiclePartsFull(netId, plate)`
+
+Resets every part to installed and 100% and persists it (a garage "full repair"). Live entities are updated immediately.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `netId` | `number` | Network id of the vehicle. |
+| `plate` | `string` | Vehicle plate. |
+
+**Returns** `boolean`
+
+**Example**
+
+```lua
+exports.vehicle_spawner:RestoreVehiclePartsFull(netId, plate)
+```
+
+
+## Client exports
+
+#### `zombieAttackedVehicle(netId)`
+
+Tells `vehicle_spawner` that a zombie just hit a vehicle body, so the health drop is not treated as a player crash. Call it from the zombie resource.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `netId` | `number` | Network id of the vehicle. |
+
+**Returns** nothing.
+
+**Example**
+
+```lua
+exports.vehicle_spawner:zombieAttackedVehicle(NetworkGetNetworkIdFromEntity(veh))
+```
+
+
+#### `GetContamDebugText(veh)`
+
+The contaminated-fuel effect lines for a vehicle. Used by a fuel script's debug overlay.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `veh` | `number` | Vehicle entity handle. |
+
+**Returns** `string | nil`: the effect lines, `nil` if the fuel is clean.
+
+**Example**
+
+```lua
+local text = exports.vehicle_spawner:GetContamDebugText(veh)
+if text then print(text) end
+```
+
+
+## Shared exports
+
+#### `GetVehicleBuildBlockPoints()`
+
+Every coordinate a vehicle **can** spawn at: the full static pool, not just the vehicles spawned now. Base building can be blocked there without a legally placed base becoming illegal later.
+
+**Returns** `vector3[]`: array of coordinates.
+
+**Example**
+
+```lua
+for _, pos in ipairs(exports.vehicle_spawner:GetVehicleBuildBlockPoints()) do
+    -- keep bases away from pos
+end
+```
+
+
+## Other resources' vehicles
+
+Vehicles owned by other ROTD resources are left alone by the cleanup: `rotd_events` and `rotd_mystery_merchant` export `GetActiveVehicles()`, see [[Small-Exports]].
+
+## Recipes
+
+### Protect an event vehicle from the cleanup sweep (server)
+
+```lua
+local veh = CreateVehicle(`sanchez`, coords.x, coords.y, coords.z, heading, true, true)
+Wait(500)
+exports.vehicle_spawner:ProtectVehicle(veh, true)
+
+-- when the event ends
+exports.vehicle_spawner:ProtectVehicle(veh, false)
+DeleteEntity(veh)
+```
+
+### A garage that stores and repairs (server)
+
+```lua
+RegisterNetEvent('mygarage:server:store', function(netId, plate)
+    exports.vehicle_spawner:PersistVehicleParts(netId, plate)      -- save part durability BEFORE deleting
+    DeleteEntity(NetworkGetEntityFromNetworkId(netId))
+end)
+
+RegisterNetEvent('mygarage:server:fullRepair', function(netId, plate)
+    exports.vehicle_spawner:RestoreVehiclePartsFull(netId, plate)
+end)
+```
+
+### Do not clean up right before a sweep (server)
+
+```lua
+local secs = exports.vehicle_spawner:GetNextCleanup()
+if secs and secs < 60 then
+    print(('cleanup in %d s, finish spawning later'):format(secs))
+end
+```
+
+### Zombie hits a car (client)
+
+```lua
+-- in the zombie system, when a zombie damages a vehicle
+exports.vehicle_spawner:zombieAttackedVehicle(NetworkGetNetworkIdFromEntity(vehicle))
+```

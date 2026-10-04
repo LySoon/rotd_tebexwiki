@@ -2,6 +2,7 @@
 
 The shared layer between ROTD resources and your framework, inventory and optional partner resources. A resource never calls `QBCore`, `ox_inventory` and so on directly: it asks the bridge.
 
+> [!NOTE]
 > `rotd_bridge` has **no exports to call for gameplay**. It builds a global `Bridge` table inside every resource that loads it. The functions below live on that table.
 
 ## Using it in your resource
