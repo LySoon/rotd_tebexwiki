@@ -3333,10 +3333,261 @@ end
 
 Zones, radiation, resistance, infection hooks and zombie names. Call exports with `exports.rotd_zones:Name(...)` (or `exports['rotd_zones']:Name(...)`).
 
-> [!NOTE]
 > **Side.** The badge on each export tells you where to call it: **client** from a client script, **server** from a server script, **shared** from either.
 > `rotd_zones` depends on no zombie, medical, HUD or sound resource. Anything that needs outside data (zombie names, infection state, cure, cough reactions) is a **registration export** further down.
 
+## Overview
+
+`rotd_zones` divides the map into **zones** (red, yellow, orange, green, radiation, ...) with their own **rules**, zombie settings and loot, and runs the systems that depend on them: safezone protection, radiation, guard NPCs, base-building limits, the map overlay and the zone UI.
+
+**Requirements**
+
+| Resource | Needed | Notes |
+|---|---|---|
+| `ox_lib` | yes | notifications, callbacks |
+| `rotd_bridge` | yes | framework, inventory and optional-resource layer, see [[rotd_bridge]]. Start it before `rotd_zones` |
+| A framework | yes | QBCore, Qbox or ESX (auto-detected) |
+| An inventory | optional | `core_inventory` (default), `ox_inventory` or `qb-inventory`. Only used for radiation resistance from items |
+| `rotd-hud` | optional | when it runs, it shows the zone cards; otherwise the **built-in zone UI** is used |
+
+Nothing else is required: no zombie, medical, sound or HUD resource. Features that need outside data (zombie names, infection state and cure, cough reactions) are registration exports, see below.
+
+**Install**
+1. Put `rotd_bridge` and `rotd_zones` in your resources and make sure your framework and `ox_lib` start before them.
+2. `ensure rotd_bridge` then `ensure rotd_zones`.
+3. Players must **reconnect once** after the first start: the NUI files are downloaded when joining.
+
+On ESX the bridge creates the table `rotd_player_data` the first time it is needed (it checks it on start, see [[rotd_bridge]]). QB and Qbox store the radiation dose in `charinfo` and need no table.
+
+## Zones
+
+Zones live in `Config.Zones` (`config.lua`). One entry:
+
+```lua
+Config.Zones = {
+    Beach = {
+        name = 'Beach',                          -- shown on the zone card and the map
+        type = 'yellow',                         -- red | orange | yellow | green | radiation | death | white | gray | cyan
+        priority = 10,                           -- optional: higher wins where zones overlap (then the smaller area)
+        zombie_intensity = 2.0,                  -- spawn intensity multiplier
+        zombie_classes = { 'normal', 'sprinter', 'spitter', 'howler', 'fat', 'tank' },   -- classes allowed here
+        zombie_damage_mult = 1.0, zombie_health_mult = 1.0, zombie_armor_add = 0,        -- optional zombie stat changes
+        no_sleep = false,                        -- optional
+        rules = {                                -- booleans, all optional (default true)
+            baseBuilding = true, baseRaiding = false, PvP = true, Weapons = false, blackout = true,
+        },
+        models = {                               -- per zombie class
+            normal = { extraloot = { { name = 'money', chance = 8, min = 10, max = 35 } } },
+        },
+        zonedata = {
+            type = 'poly',
+            debug = false,
+            coords = { vector3(-2304.19, -386.52, 1.57), vector3(-2070.0, -407.21, 11.42), ... },   -- polygon corners
+        },
+    },
+}
+```
+
+Overlapping zones are ranked by `priority` (higher wins), then by the smaller area (`Config.ZoneRank`). **Radiation is not decided by the winner**: any radiation polygon containing the player irradiates them, even when a higher-priority zone owns that point.
+
+### Rules
+
+| Rule | Effect |
+|---|---|
+| `baseBuilding` | base building allowed (read by base-building resources through the exports) |
+| `baseRaiding` | raiding allowed |
+| `PvP` | player vs player allowed |
+| `Weapons` | weapons allowed |
+| `blackout` | the zone is in blackout; `Config.BlackoutInteriorLight` adds a faint cone of light so interiors stay barely readable. Blackout is suppressed inside garage interiors when `qb-garages` runs |
+
+Rules are only data for **your** systems unless a feature below says otherwise. Read them with `CheckCoordsZoneTypeCoordsRules` / `GetZonePlayerin`, or react to `rotd_zones:enteredZone`.
+
+### Safezones (green)
+
+Membership in a green zone is **decided by the server** and replicated, so every client agrees. Inside it:
+- players are protected from damage (server-authoritative), vehicles are made static or ghosted
+- props that chain-explode (petrol pumps and the models in `Config.PropSafety.ProtectedModels`) are made indestructible around the player (`Config.PropSafety`)
+- guard NPCs patrol and enforce the zone, see Guards below
+
+### Zone builder (admin)
+
+Draw a polygon on the big pause map and get a ready-to-paste `Config.Zones` block.
+
+| Command | Does |
+|---|---|
+| `/zonebuilder` | start a session (open the map), run again to finish. Prints the block to the F8 console and appends it to `data/builder_zones.txt` |
+| `/zbadd [me\|aim\|map\|<x> <y>]` | add a point (default: the map cursor) |
+| `/zbundo`, `/zbdel <n>` | remove the last point / point `n` |
+| `/zbins <n> [src]` | insert before point `n` |
+| `/zblist` | print the points to F8 |
+| `/zbname <name...>`, `/zbtype <type>` | set the zone name / type |
+| `/zbdraw` | toggle world markers |
+| `/zbdone`, `/zbclear` | finish / clear aliases |
+
+On the pause map: **RMB or ENTER** places a point, **DELETE** removes the last one.
+
+### Water bake (admin, once)
+
+`/bakezones` makes the admin's character walk every zone's sample grid, classifies each cell as sea, land or dry, and saves the result to `data/waterbake.json` for all clients. Run it after changing zone polygons.
+
+### Map overlay
+
+Zones are drawn as coloured shapes on the minimap and pause map (`Config.MapOverlay`: fill and border opacity, texture sizes, build batch size). `RebuildMapOverlays` redraws them after changing zones at runtime.
+
+## Radiation
+
+A zone of type `radiation` irradiates the player. Add `RadiationSources` and `Center` inside its `zonedata`:
+
+```lua
+zonedata = {
+    type = 'poly',
+    coords = { ... },
+    RadiationSources = { vector3(3480.05, 3647.18, 43.03), vector3(3429.15, 3655.68, 44.25) },   -- hot spots
+    Center = vector3(3534.02, 3717.38, 32.5),
+}
+```
+
+**Gain.** Each second inside the zone the dose rises by:
+- every source within 15 m: `max(1, floor(10 - distance))`
+- plus the centre falloff: `max(0.05, 50 / (1 + distance² / 5000))`
+
+multiplied by `(1 - resistance / 100)`. After login there is a protection window: no dose for `Config.RadiationGraceMs` (8 s), then the dose ramps from 0 to full over `Config.RadiationRampMs` (8 s).
+
+**Loss.** Outside radiation zones the dose decays by about 0.05 to 0.25 per second.
+
+**Damage.** Inside the zone the gain also hurts. It builds up and one point of damage is applied each time it reaches 1. `Config.RadiationDamageScale` scales the damage (1.0 = full, the dose itself is not changed). Each hit shows the damage feedback below.
+
+**Sprint debuff.** In the zone, sprint stamina is capped by the tier below and the character moves with a hurt walking style.
+
+### Tiers
+
+The dose decides the debuffs and the screen effect. A screen effect carries up to the next one. Below 50 there is nothing and health and stamina are normal (200, 100%).
+
+| Dose | Max health | Stamina cap | Screen effect | Cough chance per second (cooldown) | Ragdoll |
+|---|---|---|---|---|---|
+| 50 | 195 | 100% | | | |
+| 100 | 190 | 100% | | | |
+| 200 | 185 | 95% | | | |
+| 300 | 180 | 90% | `BeastLaunch` | | |
+| 400 | 175 | 90% | | 2% (35 s) | |
+| 500 | 170 | 85% | | 3% (30 s) | |
+| 600 | 165 | 85% | `MenuMGRemixIn` | 5% (30 s) | |
+| 700 | 160 | 80% | | 6% (30 s) | |
+| 800 | 155 | 85% | | 7% (30 s) | |
+| 900 | 150 | 70% | `BeastIntroScene` | 8% (30 s) | |
+| 1000 | 145 | 70% | | 9% (30 s) | |
+| 1100 | 140 | 65% | `DrugsDrivingOut` | 10% (30 s) | |
+| 1200 | 135 | 65% | | 11% (25 s) | |
+| 1300 | 130 | 60% | `ChopVision` | 12% (22 s) | |
+| 1400 | 125 | 60% | | 13% (20 s) | |
+| 1500 | 120 | 60% | `MenuSurvivalAlienIn` | 14% (17.5 s) | |
+| 1600 | 115 | 55% | | 15% (15 s) | |
+| 1700 | 110 | 50% | `MP_race_crash` | 16% (12.5 s) | |
+| 1800 | 105 | 45% | | 17% (10 s) | |
+| 1900 | 100 | 40% | | 18% (15 s) | |
+| 2000+ | 95 | 35% | `DeathFailMPIn` | 19% (15 s) | 5% per second, 3 to 15 s |
+
+Only one screen effect runs at a time. When the dose crosses a tier the new effect starts first and the old one stops 1.5 seconds later, so the screen cross-fades. At 0 the last effect runs out. Max health moves one point per second toward the tier value, both down and up.
+
+### Coughing
+
+The character coughs by tier: an animation, a sound (`Config.Sounds`), and the client event `rotd_zones:cough` with the position (zombies can hear it through your own handler, see [Cough](#cough-client)).
+
+### Saving
+
+The dose is stored in the character: `charinfo.radiation` on QB/Qbox, `rotd_player_data` on ESX. The client reports it to the server every `Config.RadiationSyncMs` (5 s, only when it changed), so a hard quit loses at most a few seconds; it is also saved on character logout and when the resource stops.
+
+### Resistance
+
+Resistance is a percentage (0 to 100) that reduces the dose gained and the damage. It comes from:
+
+1. **The clothing table** `Config.RadiationResistance.clothing`: works on any server, even without clothing items. Each entry matches what the ped wears right now.
+2. **Inventory items** (`core_inventory`, `ox_inventory`, `qb-inventory`) carrying `metadata.radiationResistance`, **while worn**: the item's clothing metadata (`mID`, `mModel`, `mTexture`, `wID`, ... and the prop keys) matches the ped, or `metadata.equipped` / `metadata.worn` is set.
+3. **Modifiers** added by other resources with `AddResistanceModifier` (potions, buffs).
+
+Per clothing slot the best value counts, slots add up, the total is capped by `Config.RadiationResistance.cap` (100 = immune). When the total changes (put on or take off a piece) a notification lists the total and the top pieces. Re-checking every `refreshMs` (3 s).
+
+Fill the clothing table in game with the admin command **`/setradcloth`**: wear a piece, run `/setradcloth mask 25 Gas Mask`. Entries are saved to `data/radiation_clothing.json` (merged with the config table) and pushed to every client.
+
+| `/setradcloth` | Does |
+|---|---|
+| *(no arguments)* | shows what you wear (drawable / texture per slot) and which pieces are already saved |
+| `<mask\|tshirt\|jacket\|pants\|hands\|shoes\|all> <res %> [--tex] [--force] [label]` | saves the current piece(s). `--tex` also matches the texture, `--force` allows drawable 0 |
+| `list` | prints every saved entry to the server console |
+| `remove <slot\|all>` | removes the saved entries matching what you wear |
+
+Your ped must be `mp_m_freemode_01` or `mp_f_freemode_01`.
+
+### Radiation indicator and feedback
+
+A small indicator at the bottom edge of the screen shows the dose (rolling digits, `+N` / `−N` popups, level name, gain and fade effects, a "Clear" flash at 0) and, in a radiation zone, **`RESISTANCE nn%`**. Damage shows a red screen-edge flash, an indicator flash and a short camera shake, all scaled by the size of the hit.
+
+```lua
+Config.RadiationUI = {
+    enabled = true,                -- false = no indicator
+    style = 'glow',                -- 'glow' (light bloom) | 'strip' (dark strip with faded ends)
+    max = 2500, bottom = 0, scale = 1.0, updateMs = 250,
+    showResistance = 'zone',       -- 'zone' | 'always' | 'off'
+}
+Config.RadiationDamageFX = { enabled = true, vignette = true, hudJolt = true, camShake = true, fullAt = 10 }
+Config.RadiationDamageScale = 0.1  -- 1.0 = full damage
+Config.RadiationSyncMs = 5000
+Config.Sounds = true               -- built-in sound player (Geiger loop, cough)
+```
+
+Level names: Trace (< 100), Low (< 500), Moderate (< 1000), High (< 1500), Severe (< 2000), Critical (2000+). `/radiation` shows the exact dose and resistance.
+
+## Zone UI
+
+Entering a zone shows a **chip** (zone name, type, radiation). Hold **Left Alt** (key mapping `+zone_details`) for the **detail card**: zombie intensity, types, stats, the zone rules and radiation. The zone colour is shown in words (`Red zone · High danger`) and tints the whole UI.
+
+- **`rotd-hud` running:** its own cards are used (the zone data is sent to it as before).
+- **`rotd-hud` not running:** the built-in UI is shown. It follows the HUD live: when the HUD starts or stops, the built-in UI hides or reappears.
+
+```lua
+Config.ZoneUI = {
+    showName = true, showType = true, showZombieIntensity = true, showZombieClasses = true,
+    showRules = true, showRadiation = true, showZombieModifiers = true, showAmbient = false,
+    builtin = true,                -- false = no zone UI at all without rotd-hud
+    builtinStyle = 'tactical',     -- 'tactical' (corner brackets, default) | 'bar' | 'hex'
+    showHint = true,               -- ALT key cap on the chip
+}
+```
+
+Zombie class names on the card come from `Config.ZombieLabels` and from `RegisterZombieLabels`. A class without a name shows its key in Title Case.
+
+## Guards and infection
+
+Guard NPCs (`Config.Guards`, patrols in `Config.GuardPatrols`, lines in `Config.GuardSpeech`) protect green zones. They can also **detect, question and cure infected players**. `rotd_zones` does not track infection: your disease or medical resource tells it, with `RegisterInfectionDetector` / `SetInfectionState` (client) and handles the cure with `RegisterInfectionCure` (server). Without them the infection checks never trigger. See [Infection and guards](#infection-and-guards-client).
+
+## No-build gate
+
+Base building is blocked near `rotd_blips` landmarks and POIs. Radii come from `Config.NoBuild` (when that table is missing the module logs `config MISSING - using defaults`). Query it with `CanBuildAtCoords`; see [[rotd_blips]].
+
+## Debug commands
+
+`/showzones` (zone blips), `/szdebug` (safezone), `/zonesdebug [key]` (map overlay health), `/ambientdebug`, `/guarddebug`, `/rotd_zone_debug`. For development only.
+
+## Console messages
+
+| Message | Meaning |
+|---|---|
+| `[rotd_bridge] rotd_zones (client): "Zone card and pause-menu display" is using the built-in zone UI. Start resource "rotd-hud" to use its own UI instead.` | information: no HUD resource, the built-in UI is in use |
+| `[rotd_zones][nobuild] module loaded (config MISSING - using defaults)` | `Config.NoBuild` is not defined, defaults apply |
+| `[rotd_zones][nobuild] no points indexed, gate is inactive` | no no-build points found (`rotd_blips` not running or no points) |
+
+## Troubleshooting
+
+| Problem | Check |
+|---|---|
+| Console: `callback 'rotd_zones:getRadResistItems' does not exist` | `server.lua` did not load: look for a parse error above it in the server console |
+| No radiation gained in the zone | the zone type must be `radiation` with `RadiationSources` and `Center`; `rotd_bridge` must run first; wait out the login grace (8 s + 8 s ramp) |
+| Radiation lost after quitting | update to a version with `Config.RadiationSyncMs`; the dose is saved every few seconds now |
+| No resistance from an item | the item needs `metadata.radiationResistance` and must be **worn** (matching clothing metadata or `metadata.equipped`); or use the clothing table / `/setradcloth` |
+| New UI not showing / old look | disconnect fully and rejoin: NUI files are cached per connection |
+| Zone card missing | `Config.ZoneUI.builtin` is false and `rotd-hud` is not running |
+
+## Exports reference
 ## Index
 
 | Export | Side | What it does |
@@ -3746,7 +3997,6 @@ print(d.maxhealth, d.maxstamina)
 
 #### `RadiationZone(inside, zonedata)`
 
-> [!NOTE]
 > **Internal.** Starts or stops the zone dose loop. The zone detection calls it, you normally never do.
 
 | Parameter | Type | Description |
@@ -3900,7 +4150,6 @@ end)
 ```
 
 
-> [!TIP]
 > Register again in the client event `rotd_zones:ready` so a restart of `rotd_zones` does not lose the registration.
 
 #### `SetInfectionState(state)`
@@ -4109,21 +4358,23 @@ end)
 AddEventHandler('rotd_zones:exitedZone', function(zone) print('left', zone.name) end)
 ```
 
-> [!CAUTION]
-> **Compatibility note.** The net event `rotd_zones:setradiation` (server) from older versions still exists and lets any client set another player's radiation. Prefer the server exports above; the event is kept only for compatibility.
+> **Removed.** Older versions had a server net event `rotd_zones:setradiation` that any client could use to set another player's radiation. Use the admin command `/setradiation` or the server exports `SetPlayerRadiation` / `AddPlayerRadiation`.
 
 ## Commands
 
 | Command | Who | What |
 |---|---|---|
 | `/radiation` | everyone | shows your dose (and resistance) |
-| `/setradiation [id] <level>` | admin | sets a player's dose (0 to 2500) |
-| `/setradcloth ...` | admin | saves what you wear as radiation clothing (`list`, `remove`, see `Config.RadiationResistance`) |
 | `+zone_details` (key mapping, Left Alt) | everyone | zone detail card |
+| `/setradiation [id] <level>` | admin | sets a player's dose (0 to 2500; no id = yourself) |
+| `/setradcloth ...` | admin | saves what you wear as radiation clothing, see [Resistance](#resistance) |
+| `/zonebuilder`, `/zbadd`, `/zbundo`, `/zbdel`, `/zbins`, `/zblist`, `/zbname`, `/zbtype`, `/zbdraw`, `/zbdone`, `/zbclear` | admin | polygon zone builder, see [Zone builder](#zone-builder-admin) |
+| `/bakezones` | admin | bakes the water mask into `data/waterbake.json` |
+| `/showzones`, `/szdebug`, `/zonesdebug [key]`, `/ambientdebug`, `/guarddebug`, `/rotd_zone_debug` | development | debug helpers |
 
 ## Configuration pointers
 
-`config.lua`: `Config.Zones`, `Config.ZoneUI` (built-in zone UI: `builtin`, `builtinStyle`, `showHint`), `Config.RadiationUI` (indicator style, position, `showResistance`), `Config.RadiationDamageFX`, `Config.RadiationDamageScale`, `Config.RadiationResistance`, `Config.ZombieLabels`, `Config.NoBuild`, `Config.Sounds`.
+`config.lua`: `Config.Zones`, `Config.ZoneUI`, `Config.RadiationUI`, `Config.RadiationDamageFX`, `Config.RadiationDamageScale`, `Config.RadiationSyncMs`, `Config.RadiationGraceMs`, `Config.RadiationRampMs`, `Config.RadiationResistance`, `Config.ZombieLabels`, `Config.Sounds`, `Config.PropSafety`, `Config.MapOverlay`, `Config.BlackoutInteriorLight`, `Config.Guards`, `Config.GuardPatrols`, `Config.GuardSpeech`, `Config.weaponsDamage`, `Config.NoBuild` (optional). See the guide sections above for what each does.
 
 ## Data shapes
 
