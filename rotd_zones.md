@@ -1090,6 +1090,7 @@ exports.rotd_zones:RebuildMapOverlays()
 | `rotd_zones:ready` | client | none | `rotd_zones` has started (register names, detectors here) |
 | `rotd_zones:enteredZone` | client | `{ key, name, type, rules }` | player enters a zone |
 | `rotd_zones:exitedZone` | client | `{ key, name, type }` | player leaves all zones |
+| `rotd_zones:zombieLabelsChanged` | client | none | zombie names were registered (other resources refresh their copy) |
 | `rotd_zones:cough` | client | `coords` | radiation cough |
 | `rotd_zones:infectionCured` | server | `src` | a guard cured a player |
 | `rotd_zones:setradiation` | client | `value` | server sets the dose (used by `SetPlayerRadiation`) |

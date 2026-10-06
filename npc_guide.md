@@ -2,6 +2,40 @@
 
 Quest NPCs, quest progress, and the currency exchange market.
 
+Needs `ox_lib`, `oxmysql` and `rotd_bridge`. Everything else is optional:
+
+| Partner | Used for | Without it |
+|---|---|---|
+| ROTD HUD (`rotd-hud`) | quest tracker, XP rewards, HUD notifications | ox_lib notifications; quest tracker and XP rewards are skipped |
+| `rotd_zones` | zombie names in dialogue (see `RegisterZombieLabels` in [[rotd_zones]]) | dialogue shows title-cased zombie ids |
+| `jim-shops`, `qb-shops`, `ox_inventory` | "Open Shop" in shopkeeper dialogue | no shop window |
+| `ox_target`, `qb-target` | talk option on NPCs | an [E] prompt |
+
+Four tables (`npc_guide_quests`, `npc_guide_exchange_rates`, `npc_guide_market_history`, `npc_guide_state`) are created automatically.
+
+## Commands
+
+| Command | Side | Does |
+|---|---|---|
+| `/npcpos` | client | prints your position to help placing NPCs |
+| `/marketpush` | server | forces the Discord market boards to update (see `Config.MarketMonitor`) |
+
+## Config overview: `config.lua`
+
+| Table | What it controls |
+|---|---|
+| `Config.InteractionDistance` | target distance for every NPC |
+| `Config.Inventory` | `'auto'` (the inventory the bridge detected) or a key of `Config.InventoryImagePaths` for reward item images |
+| `Config.Tracking` | distance sampling: `sampleMs`, `reportEvery`, `maxStepMetres` (teleport guard), `runRequiresSprint` |
+| `Config.Quests.maxLockedShown` | locked quests listed per NPC |
+| `Config.NPCs` | guide and questgiver NPCs: `id`, `type`, `name`, `portrait`, `model`, `coords`, `scenario`, `blip`, `greeting`, `quests`, `categories` |
+| `Config.ShopNPCs` | shopkeepers, keyed by shop key: the same fields plus `shop`, `openShop`, `currencies`, `exchange`, `bank`, `shopKeys`; with `model` and `coords` the ped is spawned by `npc_guide` |
+| `Config.ExchangeRates` | market: `tickSeconds`, `maxRisePerTick`, `maxFallPerTick`, `sensitivity`, `spread`, `reversionHalfLife`, `fullMoveTraders`, `flowWeight`, `circulationLiquidity`, `history` |
+| `Config.MarketMonitor` | Discord boards: channel, daily and weekly messages, board, sparkline. The bot token goes in the convar `rotdbot_token`, not in the file |
+| `Config.Bank` | banking desk: where cash and bank live (`item` or `account`), limits, quick amounts, fee |
+
+Quests are defined in `shared/quests.lua` (43 shipped). `TRACKING.md` in the resource lists every tracking event.
+
 ## Server exports: quests
 
 All of these take the player's **server id** (`src`, `number`) first.
@@ -514,3 +548,18 @@ for _, c in ipairs(candles) do print(c.bucket, c.open, c.high, c.low, c.close) e
 -- rotd-minigame already does this on success; use it only for your own minigame
 exports.npc_guide:TrackMinigame('lockpick', 4)
 ```
+
+## Shops without jim-shops
+
+`jim-shops` spawns its own shop peds and calls `OpenShopkeeper`. On servers with **qb-shops** or **ox_inventory** shops, `npc_guide` can spawn the shopkeeper itself. Add these optional fields to an entry of `Config.ShopNPCs`:
+
+```lua
+['medicshop'] = {
+    id = 'shop_medicshop', type = 'shopkeeper', shop = 'medicshop', name = 'Doc Mercer',
+    model = 's_m_m_doctor_01', coords = vector4(310.5, -595.0, 43.3, 70.0),     -- spawn the ped here
+    scenario = 'WORLD_HUMAN_CLIPBOARD',
+    shopKeys = { ['qb-shops'] = 'ltdgasoline', ['ox_inventory'] = 'MedicShop' }, -- the shop name in each resource
+}
+```
+
+With `model` and `coords` the shopkeeper is spawned and gets the normal target option, dialogue, quests and exchange. "Open Shop" then opens the shop of whichever shop resource runs (see Bridge.Shop in [[rotd_bridge]]). Entries without `model` / `coords` keep working exactly as before with `jim-shops`.

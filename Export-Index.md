@@ -1,6 +1,6 @@
 # Export index
 
-Every export in the pack, A to Z. **174 exports** across **13 pages**. On the website press Ctrl+K to search this list.
+Every export in the pack, A to Z. **173 exports** across **14 pages**. On the website press Ctrl+K to search this list.
 
 | Export | Side | Resource | What it does |
 |---|---|---|---|
@@ -45,10 +45,9 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `CheckCoordsZoneTypeCoords(coords)` | client | [rotd_zones](rotd_zones) | Short zone summary at a position. |
 | `CheckCoordsZoneTypeCoordsRules(coords)` | shared | [rotd_zones](rotd_zones) | The rules that apply at a position, or the defaults outside any zone. |
 | `ClaimReward(src, questId)` | server | [npc_guide](npc_guide) | Claims the reward of a finished quest. The HUD calls this on the claim button. |
-| `ClearNotifications()` | client | [rotd_recyclers](rotd_recyclers) | Clears all custom notifications. |
 | `CompleteQuest(src, questId)` | server | [npc_guide](npc_guide) | Force-completes the objectives of a quest. |
-| `GetActiveVehicles()` | server | [rotd_events](Small-Exports) | Lists the vehicles the event system currently owns. Used by vehicle_spawner so its cleanup sweep leaves them alone. |
-| `GetActiveVehicles()` | server | [rotd_mystery_merchant](Small-Exports) | Returns table: { vehicle } for the merchant's current vehicle, or {} when none. |
+| `GetActiveVehicles()` | server | [rotd_events](rotd_events) | Lists the vehicles the event system currently owns. vehicle_spawner uses it so its cleanup sweep leaves them alone. |
+| `GetActiveVehicles()` | server | [rotd_mystery_merchant](rotd_mystery_merchant) | Returns number[]: { vehicle } for the merchant's current van, or {} when none. vehicle_spawner uses it so its cleanup... |
 | `GetAllLootProps()` | shared | [rotd_loots](rotd_loots) | Every prop definition from Config.AlwaysInteractableProps and Config.LootSpawns. Handy for map tools or no-build rule... |
 | `GetAllNoBuildPoints()` | client | [rotd_blips](rotd_blips) | Returns table[]: both sets together. |
 | `GetAllSkillEffects()` | client | [rotd_classystem](rotd_classystem) | Returns table: a shallow copy of the active effects. |
@@ -70,10 +69,11 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `GetNextCleanup()` | server | [vehicle_spawner](vehicle_spawner) | Returns number / nil: seconds until the next cleanup sweep, nil when none is scheduled. |
 | `GetNoBuildInfo(coords)` | client | [rotd_zones](rotd_zones) | Everything about the no-build check in one table. |
 | `GetNoBuildMessage(reason)` | client | [rotd_zones](rotd_zones) | Player-facing text for a block reason. |
+| `GetPanelSnapshot()` | server | [rotd_bridge](rotd_bridge) | Returns table: what the admin panel shows right now: resources (state, dependencies, optional partners, recent consol... |
 | `GetPlayerAllModifiers()` | client | [rotd_classystem](rotd_classystem) | Returns table: every modifier value. |
 | `GetPlayerAllModifiers(src)` | server | [rotd_classystem](rotd_classystem) | Returns table: every modifier value of the player. |
-| `GetPlayerClass()` | client | [rotd_classystem](rotd_classystem) | Returns string: the class key, or 'none'. |
 | `GetPlayerClass(src)` | server | [rotd_classystem](rotd_classystem) | Returns string: the class key, or 'none'. |
+| `GetPlayerClass()` | client | [rotd_classystem](rotd_classystem) | Returns string: the class key, or 'none'. |
 | `GetPlayerClassInfo(src)` | server | [rotd_classystem](rotd_classystem) | Returns table / nil: |
 | `GetPlayerClassInfo()` | client | [rotd_classystem](rotd_classystem) | Returns table: { class, level, xp, modifiers, effects, unlockedSkills }. |
 | `GetPlayerClassLevel()` | client | [rotd_classystem](rotd_classystem) | Returns number: the class level. |
@@ -81,8 +81,8 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `GetPlayerDistanceTravel(cid)` | server | [rotd_leaderboard](rotd_leaderboard) | Returns number: lifetime distance travelled, rounded to 2 decimals. |
 | `GetPlayerExperience(src)` | server | [rotd_classystem](rotd_classystem) | Returns two values: xp (number) and level (number) of the selected class. |
 | `GetPlayerFullData(cid)` | server | [rotd_squad](rotd_squad) | Reads the complete player record. |
-| `GetPlayerModifier(modifierName)` | client | [rotd_classystem](rotd_classystem) | Returns number: the effective value (class base plus skill bonuses). |
 | `GetPlayerModifier(src, modifierName)` | server | [rotd_classystem](rotd_classystem) | Returns number: the multiplier, 1.0 when unknown. |
+| `GetPlayerModifier(modifierName)` | client | [rotd_classystem](rotd_classystem) | Returns number: the effective value (class base plus skill bonuses). |
 | `GetPlayerQuests(src)` | server | [npc_guide](npc_guide) | Returns table: { [questId] = snapshot } for all known quests. |
 | `GetPlayerRadiation(src)` | server | [rotd_zones](rotd_zones) | The last dose the client saved. It is saved every few minutes, on logout and on resource stop, so it can lag behind.... |
 | `GetPlayerReputation(cid)` | server | [rotd_squad](rotd_squad) | Reads a character's reputation. |
@@ -95,10 +95,10 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `GetRadiationResistance()` | client | [rotd_zones](rotd_zones) | Resistance is a percentage (0 to 100). It comes from worn clothing (Config.RadiationResistance.clothing, entries save... |
 | `GetReputation()` | client | [rotd_squad](rotd_squad) | Returns number: the local player's reputation. |
 | `GetSkillCooldownRemaining(skillId)` | client | [rotd_classystem](rotd_classystem) | Returns number: seconds left on the cooldown. |
-| `GetSkillEffectBool(src, effectKey)` | server | [rotd_classystem](rotd_classystem) | Returns boolean |
 | `GetSkillEffectBool(effectKey)` | client | [rotd_classystem](rotd_classystem) | Returns boolean |
-| `GetSkillEffectValue(src, effectKey)` | server | [rotd_classystem](rotd_classystem) | Returns number: the effect value, 0 when absent. Booleans count as 1 / 0. |
+| `GetSkillEffectBool(src, effectKey)` | server | [rotd_classystem](rotd_classystem) | Returns boolean |
 | `GetSkillEffectValue(skillId, effectKey)` | client | [rotd_classystem](rotd_classystem) | Returns number: the value of that effect for that skill. |
+| `GetSkillEffectValue(src, effectKey)` | server | [rotd_classystem](rotd_classystem) | Returns number: the effect value, 0 when absent. Booleans count as 1 / 0. |
 | `GetSquadByCid(cid)` | server | [rotd_squad](rotd_squad) | Returns the full squad table for a character. Only works while the squad is loaded, so online players only. |
 | `GetSquadCitizenIds(src)` | server | [rotd_squad](rotd_squad) | Lists the character ids of everyone in the squad of the given player. |
 | `GetSquadData()` | client | [rotd_squad](rotd_squad) | The squad of the local player. |
@@ -121,15 +121,15 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `GiveQuest(src, questId)` | server | [npc_guide](npc_guide) | Gives a quest to a player. |
 | `GiveToScav(netId, item, amount, metadata)` | server | [rotd_scavs](rotd_scavs) | Puts an item into a live scav's inventory. |
 | `HasBuildingAccess(src, buildingId)` | server | [rotd_squad](rotd_squad) | Checks whether the player's squad gives them access to a building. |
-| `HasMinimumModifier(src, modifierType, minimumValue)` | server | [rotd_classystem](rotd_classystem) | Returns boolean: true when the modifier is at least the minimum. |
 | `HasMinimumModifier(modifierType, minimumValue)` | client | [rotd_classystem](rotd_classystem) | Returns boolean |
+| `HasMinimumModifier(src, modifierType, minimumValue)` | server | [rotd_classystem](rotd_classystem) | Returns boolean: true when the modifier is at least the minimum. |
 | `HasShopkeeper(shopKey)` | client | [npc_guide](npc_guide) | Returns string / nil: the shopkeeper's display name, nil when no dialogue exists for that shop key. |
 | `HasSkillUnlocked(src, skillKey)` | server | [rotd_classystem](rotd_classystem) | Returns boolean |
 | `IsBaseBuildingAllowedAtCoords(coords)` | server | [rotd_zones](rotd_zones) | Whether the zone at a position allows base building. |
 | `IsCoordsInGreenZone(coords)` | server | [rotd_zones](rotd_zones) | Safezone test. |
 | `IsFriendlyFireBlocked()` | client | [rotd_squad](rotd_squad) | Returns boolean: true when friendly fire between squad mates is blocked. |
-| `IsInSquad(cid)` | server | [rotd_squad](rotd_squad) | Checks whether a character is in any squad. |
 | `IsInSquad()` | client | [rotd_squad](rotd_squad) | Returns boolean: whether the local player is in a squad. |
+| `IsInSquad(cid)` | server | [rotd_squad](rotd_squad) | Checks whether a character is in any squad. |
 | `IsNightTime()` | client | [rotd_zones](rotd_zones) | Returns boolean: true from 20:00 to 06:00 game time. |
 | `IsNoBuildReady()` | client | [rotd_zones](rotd_zones) | Returns boolean: true once the point index is built. Wait for it before relying on the other no-build exports. |
 | `IsSkillActive(skillId)` | client | [rotd_classystem](rotd_classystem) | Returns boolean: unlocked, currently active, or on cooldown (depending on the export). |
@@ -154,7 +154,6 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `RegisterInfectionDetector(fn)` | client | [rotd_zones](rotd_zones) | Registers a function that is called about once a second. Errors inside fn are ignored. |
 | `RegisterZombieLabel(class, label)` | client | [rotd_zones](rotd_zones) | Returns boolean |
 | `RegisterZombieLabels(map)` | client | [rotd_zones](rotd_zones) | Registers many names at once. Existing keys are overwritten, others kept. |
-| `RemoveNotification(id)` | client | [rotd_recyclers](rotd_recyclers) | Removes one custom notification. |
 | `RemoveResistanceModifier(id)` | client | [rotd_zones](rotd_zones) | Returns boolean |
 | `ReportCurrencyFlow(name, units, shopKey)` | server | [npc_guide](npc_guide) | Tells the market that currency entered or left the economy. Positive units are supply and push the price down at the... |
 | `RestoreVehiclePartsFull(netId, plate)` | server | [vehicle_spawner](vehicle_spawner) | Resets every part to installed and 100% and persists it (a garage "full repair"). Live entities are updated immediately. |
@@ -167,7 +166,7 @@ Every export in the pack, A to Z. **174 exports** across **13 pages**. On the we
 | `SetPlayerValue(identifier, key, value)` | server | [rotd_bridge](rotd_bridge) | Writes to the ESX store. |
 | `SetRadiation(value)` | client | [rotd_zones](rotd_zones) | Sets the absolute dose. For cures and admin tools. |
 | `ShareXp(src, amount)` | server | [rotd_squad](rotd_squad) | Shares an XP amount with the player's squad mates. |
-| `ShowNotification(title, message, type, timeout)` | client | [rotd_recyclers](rotd_recyclers) | Shows a notification. |
+| `ShowNotification(title, message, type, timeout)` | client | [rotd_recyclers](rotd_recyclers) | Shows a notification: in the ROTD HUD when it runs, otherwise an ox_lib notification. |
 | `startMinigame(type, difficulty, timeLimit, callback)` | client | [rotd-minigame](rotd-minigame) | Non-blocking version. (type, difficulty, callback) also works. |
 | `startMinigameSync(type, difficulty, timeLimit)` | client | [rotd-minigame](rotd-minigame) | Blocks the calling thread until the minigame ends. |
 | `SwapScavWeapon(netId, newWeapon, newAmmo, newMeta)` | server | [rotd_scavs](rotd_scavs) | Gives a scav a new weapon and moves its old weapon into its inventory. The squad's controlling client is told to re-a... |

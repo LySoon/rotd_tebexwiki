@@ -141,6 +141,15 @@
       display: block; margin: 22px 24px 6px; font: 600 10.5px/1 "Space Grotesk", sans-serif;
       letter-spacing: 1.6px; text-transform: uppercase; color: var(--muted);
     }
+    /* sidebar category headings stand out from resource links */
+    .sidebar-nav p { margin: 0; }
+    .sidebar-nav p strong {
+      display: flex; align-items: center; gap: 8px; margin: 26px 16px 8px; padding: 9px 12px 9px 10px;
+      font: 700 12px/1 "Space Grotesk", sans-serif; letter-spacing: 1.8px; color: var(--accent);
+      background: rgba(var(--ac), .08); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0;
+    }
+    .sidebar-nav > p:first-child strong { margin-top: 10px; }
+    .sidebar .sidebar-nav p + ul li a { margin-left: 22px; }
     .sidebar ul li a {
       display: block; margin: 1px 12px; padding: 7px 12px; border-radius: 9px; font-size: 14px;
       color: var(--muted); position: relative; overflow: hidden;
@@ -338,6 +347,12 @@
     .skip:focus { top: 12px; }
     .markdown-section:focus { outline: none; }
 
+    /* ---------- resource tabs ---------- */
+    .res-tabs { display: flex; gap: 4px; margin: 0 0 22px; border-bottom: 1px solid var(--line); }
+    .res-tabs a { padding: 9px 16px; margin-bottom: -1px; font: 600 13.5px Inter, sans-serif; color: var(--muted); border: 0; border-bottom: 2px solid transparent; text-decoration: none; transition: color .15s, border-color .15s; }
+    .res-tabs a:hover { color: var(--head); }
+    .res-tabs a.on { color: var(--accent); border-bottom-color: var(--accent); }
+    @media print { .res-tabs { display: none !important; } }
     /* ---------- breadcrumbs ---------- */
     .crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 18px; font: 500 12.5px Inter, sans-serif; color: var(--muted); }
     .crumbs a { color: var(--muted); border: 0; }
@@ -921,6 +936,56 @@
             root.insertBefore(nav, root.firstChild);
           }
 
+          // ---- resource tabs: Docs | Features | Install
+          var RES = [
+            { docs: 'rotd_bridge', install: 'Install-rotd_bridge' },
+            { docs: 'rotd_zones', features: 'Features-rotd_zones', install: 'Install-rotd_zones' },
+            { docs: 'rotd_blips', features: 'Features-rotd_blips', install: 'Install-rotd_blips' },
+            { docs: 'rotd_events', features: 'Features-rotd_events', install: 'Install-rotd_events' },
+            { docs: 'npc_guide', features: 'Features-npc_guide', install: 'Install-npc_guide' },
+            { docs: 'rotd_mystery_merchant', features: 'Features-rotd_mystery_merchant', install: 'Install-rotd_mystery_merchant' },
+            { docs: 'rotd_kits', features: 'Features-rotd_kits', install: 'Install-rotd_kits' },
+            { docs: 'rotd-minigame', features: 'Features-rotd_minigame', install: 'Install-rotd-minigame' },
+            { install: 'Install-rotd_bike' }
+          ];
+          // sidebar and home cards open a resource on its first tab: Features, then Install, then Docs
+          function defaultPage(docs) {
+            var r = RES.filter(function (x) { return x.docs === docs; })[0];
+            return r ? (r.features || r.install || r.docs) : docs;
+          }
+          document.addEventListener('click', function (e) {
+            var a = e.target.closest && e.target.closest('.sidebar-nav a, .res-card'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey) return;
+            var pg = ((a.getAttribute('href') || '').match(/^#\/([^?]+)/) || [])[1]; if (!pg) return;
+            var d = defaultPage(pg); if (d === pg) return;
+            e.preventDefault(); e.stopPropagation(); location.hash = '#/' + d;
+          }, true);
+          function markSidebar() {
+            var page = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+            var r = RES.filter(function (x) { return x.docs === page || x.features === page || x.install === page; })[0];
+            if (!r || !r.docs) return;
+            document.querySelectorAll('.sidebar-nav li').forEach(function (li) {
+              var a = li.querySelector(':scope > a'), h = a && a.getAttribute('href');
+              li.classList.toggle('active', h === '#/' + r.docs);
+            });
+          }
+
+          function buildTabs() {
+            var root = document.querySelector('.markdown-section'); if (!root) return;
+            var page = (location.hash.match(/^#\/([^?]*)/) || [])[1] || 'Home';
+            var old = root.querySelector('.res-tabs'); if (old) old.remove();
+            var r = RES.filter(function (x) { return x.docs === page || x.features === page || x.install === page; })[0]; if (!r) return;
+            var defs = [['features', 'Features'], ['install', 'Install'], ['docs', 'Docs']].filter(function (d) { return r[d[0]]; });
+            if (defs.length < 2) return;
+            var nav = document.createElement('nav'); nav.className = 'res-tabs'; nav.setAttribute('aria-label', 'Resource sections');
+            defs.forEach(function (d) {
+              var a = document.createElement('a'); a.href = '#/' + r[d[0]]; a.textContent = d[1];
+              if (r[d[0]] === page) a.className = 'on';
+              nav.appendChild(a);
+            });
+            var cr = root.querySelector('.crumbs');
+            root.insertBefore(nav, cr ? cr.nextSibling : root.firstChild);
+          }
+
           // ---- page-wide controls: side filter, expand examples, compact mode
           var filterSide = 'all';
           function applyFilter() {
@@ -1407,7 +1472,9 @@
             linkExportRefs();
             labelTables();
             buildCallouts();
+            markSidebar();
             buildCrumbs();
+            buildTabs();
             buildToolbar();
             buildToc();
             buildHome();

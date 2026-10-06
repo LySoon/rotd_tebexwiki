@@ -2,9 +2,11 @@
 
 * [Home](Home)
 * [Getting-Started](Getting-Started)
+* [Install](Install)
 
 **Core**
 * [rotd_bridge](rotd_bridge)
+* [Admin-Panel](Admin-Panel)
 
 **Resources**
 * [rotd_zones](rotd_zones)
@@ -18,7 +20,12 @@
 * [rotd_scavs](rotd_scavs)
 * [rotd_blips](rotd_blips)
 * [vehicle_spawner](vehicle_spawner)
-* [Small-Exports](Small-Exports)
+* [rotd_events](rotd_events)
+* [rotd_mystery_merchant](rotd_mystery_merchant)
+* [rotd_kits](rotd_kits)
+* [rotd_needs](rotd_needs)
+* [rotd_lockers](rotd_lockers)
+* [rotd_bike](rotd_bike)
 
 **Reference**
 * [Export-Index](Export-Index)

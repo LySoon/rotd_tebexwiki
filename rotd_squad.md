@@ -2,7 +2,6 @@
 
 Squads, reputation, per-player stats and squad building access.
 
-> [!NOTE]
 > **Identifiers.** Some exports take a **server id** (`src`, a `number`), others a **character id** (`cid`, a `string`). The parameter table of every export says which one it wants.
 
 ## Server exports
@@ -522,7 +521,6 @@ end
 
 Asks the server whether the local player's squad has access to a building.
 
-> [!WARNING]
 > **Blocking.** Call it from a thread, never from the main frame.
 
 | Parameter | Type | Description |
@@ -583,7 +581,12 @@ exports.rotd_squad:PingAt(GetEntityCoords(PlayerPedId()), 'mark')
 
 ## Optional integrations
 
-`rotd_squad` shows data from other ROTD resources when they run: class from `rotd_classystem` (`GetPlayerClass`), zombie kills from `rotd_leaderboard` (`GetZombieKillsTotal`), HUD notifications and friends list from the ROTD HUD. Each missing partner only disables its own part.
+`rotd_squad` shows data from other resources when they run: class from `rotd_classystem` (`GetPlayerClass`), zombie kills from `rotd_leaderboard` (`GetZombieKillsTotal`), HUD notifications and the friends list from the ROTD HUD, the infection level from `wasabi_ambulance`, shared base access from `hrs_base_building` and sounds from `interact-sound`. Each missing partner only disables its own part.
+
+## Storage and security settings
+
+- Squads are stored in the table `rotd_squads` (created by `rotd_bridge`). Player stats are stored in the character's metadata on QBCore / Qbox and in `rotd_player_data` (bridge) on ESX.
+- `Config.AllowClientStatEvents` (default `true`): the net events `rotd_squad:server:AddZombieKill(s)`, `AddPlayerKill`, `AddHeadshot`, `AddHealedPlayer`, `AddLoot`, `AddCraft`, `AddMissionComplete`, `VehicleDestroyed`, `StructureDestroyed` and `ShareExp` let a client report progress. Set it to `false` to ignore them and use only the server exports above.
 
 ## Data shapes
 

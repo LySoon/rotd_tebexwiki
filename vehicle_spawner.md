@@ -142,7 +142,7 @@ end
 
 ## Other resources' vehicles
 
-Vehicles owned by other ROTD resources are left alone by the cleanup: `rotd_events` and `rotd_mystery_merchant` export `GetActiveVehicles()`, see [[Small-Exports]].
+Vehicles owned by other ROTD resources are left alone by the cleanup: `rotd_events` and `rotd_mystery_merchant` export `GetActiveVehicles()`, see [[rotd_events]] and [[rotd_mystery_merchant]].
 
 ## Recipes
 

@@ -11,20 +11,61 @@
 
 ## Pages
 
-- [Changelog](https://imkamii.github.io/rotd_tebexwiki/Changelog.md): What changed in the exports and in these docs. Newest first. Add a line here whenever an export is added, renamed, changed or removed, so developers can see it.
+- [_docsify_sidebar](https://imkamii.github.io/rotd_tebexwiki/_docsify_sidebar.md)
+- [Admin-Panel](https://imkamii.github.io/rotd_tebexwiki/Admin-Panel.md): A control room for everything ROTD, inside the game. It shows which ROTD resources run, which have errors, what the bridge detected on your server, which items are missing, and lets you change the most used settings without opening a file. It is part of rotd_bridge; there is nothing extra to install.
+- [Changelog](https://imkamii.github.io/rotd_tebexwiki/Changelog.md): What changed in the exports and in these docs. Newest first.
 - [Common-Mistakes](https://imkamii.github.io/rotd_tebexwiki/Common-Mistakes.md): The errors that come up most when calling ROTD exports. Each one shows the wrong way, the right way and why.
-- [Getting-Started](https://imkamii.github.io/rotd_tebexwiki/Getting-Started.md): How exports, client and server sides, player identifiers and registration hooks work in the ROTD pack. Read this once, every other page builds on it.
+- [Export-Index](https://imkamii.github.io/rotd_tebexwiki/Export-Index.md): Every export in the pack, A to Z. 173 exports across 14 pages. On the website press Ctrl+K to search this list.
+- [Features-npc_guide](https://imkamii.github.io/rotd_tebexwiki/Features-npc_guide.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_bike](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_bike.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_blips](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_blips.md): The resource runs fully on its own; the row above is optional.
+- [Features-rotd_events](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_events.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_kits](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_kits.md): The resource runs fully on its own; the HUD is optional (ox_lib notifications are used without it).
+- [Features-rotd_lockers](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_lockers.md): The resource runs fully on its own; the target resource is optional.
+- [Features-rotd_loots](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_loots.md): A ready Config.LootSpawns for the map, so you don't have to place a single chest:
+- [Features-rotd_minigame](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_minigame.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_mystery_merchant](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_mystery_merchant.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_needs](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_needs.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_recyclers](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_recyclers.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_squad](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_squad.md): The resource runs fully on its own; every item in this table is optional.
+- [Features-rotd_zones](https://imkamii.github.io/rotd_tebexwiki/Features-rotd_zones.md): The resource runs fully on its own; every item in this table is optional.
+- [Getting-Started](https://imkamii.github.io/rotd_tebexwiki/Getting-Started.md): local zone = exports.rotd_zones:GetZoneAtCoords(vector3(215.0, -810.0, 30.0))
 - [Home](https://imkamii.github.io/rotd_tebexwiki/Home.md): Documentation for the exports, events and APIs of the ROTD resources, with examples.
+- [Install](https://imkamii.github.io/rotd_tebexwiki/Install.md): How to install the ROTD resources. Every resource has its own page with requirements, items, database, convars and a test; a short README[install].txt inside each resource folder points here.
+- [Install-npc_guide](https://imkamii.github.io/rotd_tebexwiki/Install-npc_guide.md): Talking NPCs, quests, shopkeepers, banking and the currency market.
+- [Install-rotd_bike](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_bike.md): Bike item: use it to place a bike, pick it up again with the target option.
+- [Install-rotd_blips](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_blips.md): Discovery map blips, intel cards and no-build points.
+- [Install-rotd_bridge](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_bridge.md): The shared layer every ROTD resource uses for framework, inventory, target, shop, HUD and database access. Install it first.
+- [Install-rotd_events](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_events.md): Server-run world events (helicopter assault) with crash loot.
+- [Install-rotd_kits](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_kits.md): Claimable item kits with a cooldown for each kit.
+- [Install-rotd_lockers](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_lockers.md): Personal lockers with upgrade levels.
+- [Install-rotd_loots](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_loots.md): Lootable chests and props with lock minigames, loot sense and synced respawns.
+- [Install-rotd_mystery_merchant](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_mystery_merchant.md): A travelling merchant van that moves every 30 minutes and trades items; includes a dice game.
+- [Install-rotd_needs](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_needs.md): Food, drink and syringe items: hunger and thirst, effects, partly eaten items and the syringe.
+- [Install-rotd_recyclers](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_recyclers.md): Scrapping stations, fuel refinery and weapon part crafting.
+- [Install-rotd_squad](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_squad.md): Squads, pings, shared blips, reputation and a squad panel.
+- [Install-rotd_zones](https://imkamii.github.io/rotd_tebexwiki/Install-rotd_zones.md): Zones, radiation, safezones and guards.
+- [Install-rotd-minigame](https://imkamii.github.io/rotd_tebexwiki/Install-rotd-minigame.md): 18 skill-check minigames (lockpick, safe dial, wire splice and more) behind two exports.
+- [Items-rotd_loots](https://imkamii.github.io/rotd_tebexwiki/Items-rotd_loots.md): The loot tables give items by name. An item that does not exist in your item list is skipped and the server console prints "not in your item list". Add the ones you want; the rest simply never drop.
+- [Items-rotd_needs-ESX](https://imkamii.github.io/rotd_tebexwiki/Items-rotd_needs-ESX.md): Import this SQL into your database (table items). 159 items; items that already exist are left alone. The same file is in the resource folder: install/esx_items.sql.
+- [Items-rotd_needs-ox_inventory](https://imkamii.github.io/rotd_tebexwiki/Items-rotd_needs-ox_inventory.md): Paste these lines inside the table of ox_inventory/data/items.lua, then restart ox_inventory. 159 items. The same list is in the resource folder: install/ox_items.lua.
+- [Items-rotd_needs-QBCore](https://imkamii.github.io/rotd_tebexwiki/Items-rotd_needs-QBCore.md): Paste these lines inside the Items table of qb-core/shared/items.lua, then restart qb-core. 159 items. The same list is in the resource folder: install/qbcore_items.lua.
+- [Items-rotd_recyclers](https://imkamii.github.io/rotd_tebexwiki/Items-rotd_recyclers.md): The recipes use 192 item names: the items that go into the machines (materials, parts and 86 weapons) and the items that come out. An item that is not in your item list cannot be placed in a stash: a reward with an unknown name is skipped and the server console prints a warning every time (plus one list of all missing rewards at start), and an input you cannot own cannot be recycled.
 - [npc_guide](https://imkamii.github.io/rotd_tebexwiki/npc_guide.md): Quest NPCs, quest progress, and the currency exchange market.
+- [rotd_bike](https://imkamii.github.io/rotd_tebexwiki/rotd_bike.md): A bike as an inventory item: use it to put a bike on the ground, pick it up again with the target option, with the bike's colour and condition kept in the item. The resource has no exports; this page documents the item data, the config and the events.
 - [rotd_blips](https://imkamii.github.io/rotd_tebexwiki/rotd_blips.md): Discoverable map blips and POIs. Its exports give positions where building should be blocked; rotd_zones uses them for its no-build gate. Called from the client (the config is shared, so server use also works).
 - [rotd_bridge](https://imkamii.github.io/rotd_tebexwiki/rotd_bridge.md): The shared layer between ROTD resources and your framework, inventory and optional partner resources. A resource never calls QBCore, ox_inventory and so on directly: it asks the bridge.
 - [rotd_classystem](https://imkamii.github.io/rotd_tebexwiki/rotd_classystem.md): Classes, skills, XP and modifiers. Modifiers are multipliers (1.0 = normal) such as meleeDamage. Skills carry effects with numeric or boolean values.
+- [rotd_events](https://imkamii.github.io/rotd_tebexwiki/rotd_events.md): Server-run world events: a hostile armoured vehicle patrols the map, a destroyed vehicle drops loot crates. Only the helicopter event is enabled in the default config; the APC and tank events are in the code and the config, commented out.
+- [rotd_kits](https://imkamii.github.io/rotd_tebexwiki/rotd_kits.md): Claimable item kits, one chat command per kit, each with its own cooldown. Kits are defined in config.lua. The resource has no exports; this page documents the commands, the config and the data file.
 - [rotd_leaderboard](https://imkamii.github.io/rotd_tebexwiki/rotd_leaderboard.md): Read-only stat lookups from the player_stats table. All exports are server side and take a cid (character id, string). Unknown players return 0.
-- [rotd_loots](https://imkamii.github.io/rotd_tebexwiki/rotd_loots.md): Searchable loot props and containers, plus the "loot sense" scan.
-- [rotd_recyclers](https://imkamii.github.io/rotd_tebexwiki/rotd_recyclers.md): Scrapping stations. The only exports are notification helpers (client side).
+- [rotd_lockers](https://imkamii.github.io/rotd_tebexwiki/rotd_lockers.md): Personal lockers: every character can buy a locker in an area, open it at the locker points and upgrade it at the Stashmaster. The level decides the size. The resource has no exports; this page documents the config, the saved data and the events.
+- [rotd_loots](https://imkamii.github.io/rotd_tebexwiki/rotd_loots.md): Lootable chests and props with lock minigames, plus the "loot sense" scan.
+- [rotd_mystery_merchant](https://imkamii.github.io/rotd_tebexwiki/rotd_mystery_merchant.md): A travelling merchant van that moves to a random spot every Config.resettime minutes. The merchant trades items through your shop resource and offers a dice game.
+- [rotd_needs](https://imkamii.github.io/rotd_tebexwiki/rotd_needs.md): Food, drink and syringe items. Using an item restores hunger and thirst, can add effects (regeneration, poison, stamina, speed, blindness, ...), keeps what is left of a partly eaten item, and gives XP. The resource has no exports; this page documents the config, the events and the rules.
+- [rotd_recyclers](https://imkamii.github.io/rotd_tebexwiki/rotd_recyclers.md): Scrapping stations: put items into an input stash, the machine breaks them down into materials, you collect them from the output stash. A second kind of station refines fuel (jerry cans) and a recipe file crafts weapon parts. The only export is a notification helper (client side).
 - [rotd_scavs](https://imkamii.github.io/rotd_tebexwiki/rotd_scavs.md): AI scavenger squads that loot corpses and stashes. Two server exports let other systems change what a scav carries. A scav is identified by its network id (netId, number).
 - [rotd_squad](https://imkamii.github.io/rotd_tebexwiki/rotd_squad.md): Squads, reputation, per-player stats and squad building access.
 - [rotd_zones](https://imkamii.github.io/rotd_tebexwiki/rotd_zones.md): Zones, radiation, resistance, infection hooks and zombie names. Call exports with exports.rotd_zones:Name(...) (or exports['rotd_zones']:Name(...)).
-- [rotd-minigame](https://imkamii.github.io/rotd_tebexwiki/rotd-minigame.md): Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire splice and more. Client side only.
-- [Small-Exports](https://imkamii.github.io/rotd_tebexwiki/Small-Exports.md): Tiny exports of two resources, rotd_events and rotd_mystery_merchant. Both list the vehicles they currently own, so cleanup scripts such as vehicle_spawner leave those vehicles alone.
+- [rotd-minigame](https://imkamii.github.io/rotd_tebexwiki/rotd-minigame.md): Skill-check style minigames shown as a NUI: lockpick, keypad, safe dial, wire splice and more. The exports are client side; the server handles item use, XP and noise.
 - [vehicle_spawner](https://imkamii.github.io/rotd_tebexwiki/vehicle_spawner.md): World vehicles, damage and parts. Exports for event scripts, garages and zombie systems.
